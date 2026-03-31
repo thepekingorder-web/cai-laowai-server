@@ -7,7 +7,7 @@
   <title>猜老外</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@700;900&display=swap" rel="stylesheet" />
   <style>
     :root {
       --orange-deep: #e85a00;
@@ -291,90 +291,56 @@
       margin-top: auto;
     }
 
-    /* Result: compact score + high-contrast “final poster” (always readable on mobile) */
     .result-hero {
       flex: 0 0 auto;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
       text-align: center;
-      padding: 8px 0 12px;
+      padding: 16px 0 8px;
     }
     .result-hero .score-num {
-      font-family: Anton, sans-serif;
-      font-size: clamp(5rem, 28vw, 7rem);
-      font-weight: 400;
-      color: var(--blue-title);
-      text-shadow: 3px 3px 0 #fff, 6px 6px 0 rgba(10,31,143,0.15);
+      font-family: "Noto Sans SC", sans-serif;
+      font-size: clamp(3.25rem, 20vw, 4.25rem);
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
       line-height: 1;
       display: flex;
       align-items: baseline;
       justify-content: center;
-      gap: 0.08em;
+      gap: 0.06em;
     }
     .result-hero .score-denom {
-      font-family: "Noto Sans SC", sans-serif;
       font-weight: 900;
-      font-size: 0.38em;
-      opacity: 0.95;
+      font-size: 0.42em;
+      opacity: 0.92;
     }
     .result-hero .score-tag {
-      font-weight: 800;
-      font-size: 0.9rem;
+      font-weight: 700;
+      font-size: 0.875rem;
+      margin-top: 10px;
+      opacity: 0.95;
+    }
+    .result-hero .pool-size-line {
+      font-size: 0.8125rem;
+      font-weight: 600;
       margin-top: 8px;
-      max-width: 280px;
-      line-height: 1.35;
-    }
-    .result-final-poster {
-      flex: 0 0 auto;
-      width: 100%;
-      margin: 12px 0 16px;
-      padding: 22px 20px 20px;
-      border-radius: 18px;
-      background: linear-gradient(165deg, #fffef8 0%, #fff 40%, #f0f4ff 100%);
-      border: 4px solid #0a1f8f;
-      box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.9),
-        0 16px 36px rgba(10, 31, 143, 0.35);
-      text-align: center;
-    }
-    .result-final-poster .poster-kicker {
-      font-family: Anton, sans-serif;
-      font-size: 0.72rem;
-      letter-spacing: 0.28em;
-      text-indent: 0.28em;
-      color: #0a1f8f;
-      opacity: 0.85;
-      margin-bottom: 12px;
-    }
-    .result-final-poster .poster-body {
-      font-family: "Noto Sans SC", sans-serif;
-      font-size: 0.98rem;
-      font-weight: 800;
-      line-height: 1.65;
-      color: #0a1f8f;
-      margin: 0;
-    }
-    .result-final-poster .poster-body p + p {
-      margin-top: 12px;
+      opacity: 0.88;
     }
     .stats-global {
-      margin: 14px 0 10px;
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.22);
-      border: 2px solid rgba(10, 31, 143, 0.25);
-      font-size: 0.88rem;
-      font-weight: 800;
-      line-height: 1.55;
+      margin: 12px 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.18);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1.5;
       text-align: center;
       color: #fff;
-      text-shadow: 0 1px 2px var(--shadow);
     }
     .stats-global p + p {
-      margin-top: 8px;
-      opacity: 0.95;
+      margin-top: 6px;
     }
     .bgm-fab {
       position: fixed;
@@ -397,86 +363,44 @@
       transform: scale(0.94);
     }
 
-    .sponsor {
-      margin-top: 8px;
-      padding: 16px;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.2);
-      border: 2px dashed rgba(10,31,143,0.35);
-      text-align: center;
-    }
-    .sponsor .tag { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.2em; opacity: 0.9; }
-    .sponsor .name { font-size: 1.15rem; font-weight: 900; color: var(--blue-title); margin-top: 6px; }
-    .stats-strip {
-      margin-top: 12px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      opacity: 0.88;
-      text-align: center;
-    }
     .result-actions {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin-top: 16px;
+      gap: 10px;
+      margin-top: 20px;
+      padding-bottom: 8px;
     }
-    .btn-share {
+    .result-actions .result-btn {
       font-family: "Noto Sans SC", sans-serif;
-      font-weight: 900;
-      font-size: 1.1rem;
-      padding: 16px;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 14px 20px;
       border: none;
-      border-radius: 14px;
-      background: linear-gradient(180deg, #2ee88a 0%, var(--wechat) 100%);
-      color: #fff;
-      box-shadow: 0 6px 0 #056838, 0 12px 28px rgba(0,0,0,0.22);
+      border-radius: 12px;
       cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 0.06s ease, opacity 0.06s ease;
     }
-    .btn-share:active { transform: translateY(4px); box-shadow: 0 2px 0 #056838; }
-    .big-btn {
-      font-family: "Noto Sans SC", sans-serif;
-      font-weight: 900;
-      font-size: 1.15rem;
-      padding: 16px;
-      border: none;
-      border-radius: 14px;
-      background: var(--blue-title);
+    .result-actions .result-btn:active {
+      transform: scale(0.98);
+    }
+    .result-btn--primary {
+      background: #0a1f8f;
       color: #fff;
-      box-shadow: 0 8px 0 #050a3d, 0 14px 32px rgba(0,0,0,0.25);
-      cursor: pointer;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
     }
-    .big-btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #050a3d; }
+    .result-btn--secondary {
+      background: rgba(255, 255, 255, 0.95);
+      color: #0a1f8f;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+    }
     .share-hint {
-      font-size: 0.65rem;
+      font-size: 0.75rem;
       text-align: center;
       opacity: 0.85;
-      margin-top: 8px;
-      line-height: 1.45;
-    }
-    .credits-drawer {
-      margin-top: 10px;
-      font-size: 0.7rem;
-      text-align: left;
-      color: rgba(255, 255, 255, 0.92);
-    }
-    .credits-drawer summary {
-      cursor: pointer;
-      font-weight: 800;
-      list-style: none;
-    }
-    .credits-drawer summary::-webkit-details-marker { display: none; }
-    .credits-list {
-      margin: 10px 0 0;
-      padding-left: 1.1em;
-      line-height: 1.55;
-      max-height: 42vh;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .credits-list a {
-      color: #fff;
-      text-decoration: underline;
-      text-underline-offset: 2px;
+      margin: 4px 0 0;
+      line-height: 1.4;
+      min-height: 1.2em;
     }
     .hidden { display: none !important; }
   </style>
@@ -527,30 +451,14 @@
     <section id="screen-result" class="screen">
       <div class="result-hero">
         <div class="score-num"><span id="final-score">0</span><span class="score-denom">/10</span></div>
-        <div class="score-tag">你猜对了几国？</div>
-      </div>
-      <div class="result-final-poster prose-cjk" role="img" aria-label="结束提示">
-        <p class="poster-kicker">本局结束</p>
-        <div class="poster-body">
-          <p>瞎猜小游戏而已，别当真。</p>
-          <p>长相猜不了国籍；多玩几次就记得住套路啦。</p>
-        </div>
+        <div class="score-tag">猜对了几国？</div>
+        <p class="pool-size-line" id="pool-size-line" aria-live="polite"></p>
       </div>
       <div id="global-compare" class="stats-global prose-cjk hidden" aria-live="polite"></div>
-      <div class="sponsor" id="sponsor-slot">
-        <div class="tag">本局由</div>
-        <div class="name" id="sponsor-name">预留广告位</div>
-        <div class="tag" style="margin-top:8px;letter-spacing:0.1em">TITLE SPONSOR</div>
-      </div>
-      <p class="stats-strip">本地试玩次数：<span id="play-count">—</span></p>
-      <details class="credits-drawer hidden" id="credits-drawer">
-        <summary>肖像来源与许可</summary>
-        <ul class="credits-list" id="credits-list"></ul>
-      </details>
       <div class="result-actions">
-        <button type="button" class="btn-share" id="btn-share">分享成绩</button>
-        <p class="share-hint prose-cjk" id="share-hint">支持系统分享；在微信内若无法弹出，我们会把文案和链接复制到剪贴板。</p>
-        <button type="button" class="big-btn" id="btn-again">再玩一局</button>
+        <button type="button" class="result-btn result-btn--secondary" id="btn-share">分享成绩</button>
+        <p class="share-hint prose-cjk" id="share-hint"></p>
+        <button type="button" class="result-btn result-btn--primary" id="btn-again">再玩一局</button>
       </div>
     </section>
   </div>
@@ -570,9 +478,11 @@
       zh: NAT_TO_ZH[code],
     }));
 
-    /** IN/IR only from `&nat=` API stream so labels match RandomUser regional sets. */
-    const NAT_FETCH_ONLY = { IN: "in", IR: "ir" };
-    const RESTRICTED_NAT = new Set(Object.keys(NAT_FETCH_ONLY));
+    /** RandomUser `nat=` param (UK is `gb`, not `gb` code in ISO is GB). */
+    function randomUserNatParam(codeUpper) {
+      if (codeUpper === "GB") return "gb";
+      return codeUpper.toLowerCase();
+    }
 
     const FALLBACK_POOL = [
       { img: "https://randomuser.me/api/portraits/women/71.jpg", code: "US", zh: "美国" },
@@ -602,8 +512,7 @@
     const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v1";
     /** Only if hosted JSON + cache both fail (e.g. first open in strict WebView). */
     const QUICK_BUILD_TARGET = 120;
-    const QUICK_BUILD_MAX_SEED = 800;
-    const QUICK_BUILD_BUDGET_MS = 5000;
+    const QUICK_BUILD_BUDGET_MS = 8000;
     const FETCH_TIMEOUT_MS = 3200;
 
     function fetchWithTimeout(url, ms, init = {}) {
@@ -641,8 +550,10 @@
       return out;
     }
 
+    const MIN_POOL_ENTRIES = 15;
+
     function applyPoolEntries(entries, sourceLabel) {
-      if (!entries || entries.length < 40) return false;
+      if (!entries || entries.length < MIN_POOL_ENTRIES) return false;
       POOL = entries;
       poolBuilt = true;
       faceManifest = {
@@ -680,39 +591,28 @@
         return true;
       }
 
-      for (const [codeU, natParam] of Object.entries(NAT_FETCH_ONLY)) {
-        let got = 0;
-        for (let seed = 0; seed < 400 && got < 24 && out.length < QUICK_BUILD_TARGET && !overBudget(); seed++) {
+      for (const codeU of Object.keys(NAT_TO_ZH)) {
+        if (out.length >= QUICK_BUILD_TARGET || overBudget()) break;
+        const natParam = randomUserNatParam(codeU);
+        for (let seed = 0; seed < 200 && out.length < QUICK_BUILD_TARGET && !overBudget(); seed++) {
           const rows = await pullBatch(
-            `https://randomuser.me/api/?results=10&nat=${natParam}&seed=${seed}&noinfo`
+            `https://randomuser.me/api/?results=15&nat=${natParam}&seed=${seed}&noinfo`
           );
           for (const row of rows) {
             const nat = (row.nat || "").toUpperCase();
             if (nat !== codeU) continue;
             const pic = row.picture && row.picture.large;
-            if (pushRow(nat, pic)) got += 1;
+            pushRow(nat, pic);
           }
+          if (seed % 40 === 0 && seed > 0) await new Promise((r) => setTimeout(r, 0));
         }
-      }
-
-      for (let seed = 0; seed < QUICK_BUILD_MAX_SEED && out.length < QUICK_BUILD_TARGET && !overBudget(); seed++) {
-        const rows = await pullBatch(
-          `https://randomuser.me/api/?results=10&seed=${seed}&noinfo`
-        );
-        for (const row of rows) {
-          const nat = (row.nat || "").toUpperCase();
-          if (!NAT_TO_ZH[nat] || RESTRICTED_NAT.has(nat)) continue;
-          const pic = row.picture && row.picture.large;
-          if (pushRow(nat, pic)) break;
-        }
-        if (seed % 80 === 0 && seed > 0) await new Promise((r) => setTimeout(r, 0));
       }
 
       return out;
     }
 
     async function ensurePool() {
-      if (poolBuilt && POOL.length >= 40) return;
+      if (poolBuilt && POOL.length >= MIN_POOL_ENTRIES) return;
 
       const poolUrl = `${gameOriginBase()}/data/faces-pool.json`;
       try {
@@ -753,20 +653,6 @@
       faceManifest = null;
     }
 
-    function renderCreditsList() {
-      const drawer = document.getElementById("credits-drawer");
-      const ul = document.getElementById("credits-list");
-      if (!drawer || !ul) return;
-      drawer.classList.remove("hidden");
-      ul.innerHTML = "";
-      const li = document.createElement("li");
-      li.textContent =
-        "图片来自 RandomUser。本题约 " +
-        POOL.length +
-        " 张不重复的脸；大题库在网站的 faces-pool.json 里，GitHub 会定期更新。演示用。";
-      ul.appendChild(li);
-    }
-
     /** ISO 3166-1 alpha-2 → flag emoji (regional indicators). */
     function flagEmoji(iso2) {
       const s = String(iso2 || "").toUpperCase();
@@ -777,17 +663,6 @@
 
     const ROUNDS_PER_GAME = 10;
     const STORAGE_PLAYS = "cailaowai_plays_v1";
-
-    const PRICING_TIERS = [
-      { minPlays: 0, maxPlays: 4999, titleSponsor: 500 },
-      { minPlays: 5000, maxPlays: 19999, titleSponsor: 2000 },
-      { minPlays: 20000, maxPlays: 49999, titleSponsor: 8000 },
-      { minPlays: 50000, maxPlays: Infinity, titleSponsor: 25000 },
-    ];
-
-    function tierForPlays(n) {
-      return PRICING_TIERS.find((t) => n >= t.minPlays && n <= t.maxPlays) || PRICING_TIERS[0];
-    }
 
     function shuffle(arr) {
       const a = arr.slice();
@@ -1140,16 +1015,14 @@
     }
 
     async function finish() {
-      const plays = bumpPlayCount();
+      bumpPlayCount();
       const finalScore = score;
       document.getElementById("final-score").textContent = String(finalScore);
-      document.getElementById("play-count").textContent = String(plays);
-      const tier = tierForPlays(plays);
-      document.getElementById("sponsor-name").textContent =
-        "预留广告位 · 演示价：冠名 ¥" + tier.titleSponsor + "/天起";
-      document.getElementById("share-hint").textContent =
-        "支持系统分享；在微信内若无法弹出，我们会把文案和链接复制到剪贴板。";
-      renderCreditsList();
+      const poolLine = document.getElementById("pool-size-line");
+      if (poolLine) {
+        poolLine.textContent = "本题库共 " + POOL.length + " 张头像（按各国分区生成）。";
+      }
+      document.getElementById("share-hint").textContent = "";
       show("result");
       await submitGlobalStats(finalScore);
     }
