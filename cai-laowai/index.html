@@ -509,7 +509,7 @@
     let POOL = FALLBACK_POOL.slice();
     let faceManifest = null;
     let poolBuilt = false;
-    const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v1";
+    const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v3";
     /** Only if hosted JSON + cache both fail (e.g. first open in strict WebView). */
     const QUICK_BUILD_TARGET = 120;
     const QUICK_BUILD_BUDGET_MS = 8000;
@@ -551,9 +551,24 @@
     }
 
     const MIN_POOL_ENTRIES = 15;
+    /** Reject bad builds where one country dominates (e.g. broken JSON with all IN). */
+    function poolDistributionBroken(entries) {
+      if (!entries || entries.length < MIN_POOL_ENTRIES) return true;
+      const counts = {};
+      for (const row of entries) {
+        const c = row.code || "";
+        counts[c] = (counts[c] || 0) + 1;
+      }
+      const n = entries.length;
+      const distinct = Object.keys(counts).length;
+      if (distinct < 5) return true;
+      const maxShare = Math.max(...Object.values(counts)) / n;
+      return maxShare > 0.35;
+    }
 
     function applyPoolEntries(entries, sourceLabel) {
       if (!entries || entries.length < MIN_POOL_ENTRIES) return false;
+      if (poolDistributionBroken(entries)) return false;
       POOL = entries;
       poolBuilt = true;
       faceManifest = {
@@ -629,6 +644,11 @@
             } catch (e) {}
             return;
           }
+          try {
+            localStorage.removeItem(POOL_JSON_CACHE_KEY);
+            localStorage.removeItem("cailaowai_faces_pool_v1");
+            localStorage.removeItem("cailaowai_faces_pool_v2");
+          } catch (e) {}
         }
       } catch (e) {}
 
@@ -636,14 +656,18 @@
         const raw = localStorage.getItem(POOL_JSON_CACHE_KEY);
         if (raw) {
           const c = JSON.parse(raw);
-          if (c.entries && applyPoolEntries(normalizePoolEntries({ entries: c.entries }), "cache")) {
+          const fromCache = normalizePoolEntries({ entries: c.entries });
+          if (c.entries && applyPoolEntries(fromCache, "cache")) {
             return;
           }
+          try {
+            localStorage.removeItem(POOL_JSON_CACHE_KEY);
+          } catch (e) {}
         }
       } catch (e) {}
 
       const built = await buildHugeHumanPoolQuick();
-      if (built.length >= 40) {
+      if (built.length >= MIN_POOL_ENTRIES && !poolDistributionBroken(built)) {
         applyPoolEntries(built, "randomuser.me (live)");
         return;
       }
