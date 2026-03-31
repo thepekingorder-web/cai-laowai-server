@@ -37,6 +37,14 @@ def pool_review_page():
     return FileResponse(str(p), media_type="text/html; charset=utf-8")
 
 
+@app.get("/ui-test.html")
+def ui_test_page():
+    p = GAME / "ui-test.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="ui-test.html missing")
+    return FileResponse(str(p), media_type="text/html; charset=utf-8")
+
+
 @app.get("/data/faces-manifest.json")
 def faces_manifest():
     p = DATA / "faces-manifest.json"
@@ -50,6 +58,14 @@ def faces_pool():
     p = DATA / "faces-pool.json"
     if not p.exists():
         raise HTTPException(status_code=404, detail="faces-pool.json missing")
+    return FileResponse(str(p), media_type="application/json; charset=utf-8")
+
+
+@app.get("/data/countries.json")
+def countries_json():
+    p = DATA / "countries.json"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="countries.json missing")
     return FileResponse(str(p), media_type="application/json; charset=utf-8")
 
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#ff6a00" />
-  <title>猜老外</title>
+  <title>猜老外 · UI-test</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@700;900&display=swap" rel="stylesheet" />
@@ -338,6 +338,11 @@
       margin-top: 8px;
       opacity: 0.88;
     }
+    .result-hero .pool-size-line a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
     .session-analysis {
       margin: 14px 0;
       padding: 14px 16px;
@@ -475,6 +480,16 @@
       text-decoration: underline;
       text-underline-offset: 2px;
     }
+    .ui-test-tag {
+      margin-top: 14px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      opacity: 0.88;
+      text-align: center;
+      max-width: 300px;
+      line-height: 1.35;
+      text-shadow: 0 1px 2px var(--shadow);
+    }
   </style>
 </head>
 <body>
@@ -502,6 +517,7 @@
         </figure>
         <p id="intro-challenge" class="splash-friend hidden prose-cjk"></p>
         <button type="button" class="splash-btn" id="btn-start">开始</button>
+        <p class="ui-test-tag prose-cjk" aria-hidden="true">UI-test · 图片来源 randomuser.me（不加载本地题库）</p>
       </div>
     </section>
 
@@ -519,10 +535,8 @@
       </div>
       <p class="footer-note prose-cjk">点选答案后自动下一题</p>
       <p class="footer-note prose-cjk disclaimer-muted" id="play-disclaimer">
-        图片来源 randomuser.me：官方说明<strong>头像与国籍字段无关</strong>，题目仅为娱乐。
-        需要按相貌标注国别请用
-        <a class="pool-review-link" href="#">题库校对</a>
-        导出 JSON 后替换服务器上的 <code style="font-size:0.85em">data/faces-pool.json</code>。
+        <strong>UI-test</strong>：本页不读取 <code style="font-size:0.85em">faces-pool.json</code>，头像来自 randomuser.me 在线拉取或内置 fallback。
+        官方说明<strong>头像与国籍字段无关</strong>，题目仅为娱乐。
       </p>
     </section>
 
@@ -604,7 +618,6 @@
     let POOL = FALLBACK_POOL.slice();
     let faceManifest = null;
     let poolBuilt = false;
-    const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v6";
     /** Only if hosted JSON + cache both fail (e.g. first open in strict WebView). */
     const QUICK_BUILD_TARGET = 120;
     const QUICK_BUILD_BUDGET_MS = 8000;
@@ -794,49 +807,10 @@
       if (poolBuilt && POOL.length >= MIN_POOL_ENTRIES) return;
       await ensureCountryLabels();
 
-      const poolUrl = `${gameOriginBase()}/data/faces-pool.json`;
-      try {
-        const r = await fetchWithTimeout(poolUrl, 10000);
-        if (r.ok) {
-          const data = await r.json();
-          const entries = normalizePoolEntries(data);
-          if (applyPoolEntries(entries, "faces-pool.json")) {
-            try {
-              localStorage.setItem(
-                POOL_JSON_CACHE_KEY,
-                JSON.stringify({ v: data.version || 0, entries: POOL })
-              );
-            } catch (e) {}
-            return;
-          }
-          try {
-            localStorage.removeItem(POOL_JSON_CACHE_KEY);
-            localStorage.removeItem("cailaowai_faces_pool_v1");
-            localStorage.removeItem("cailaowai_faces_pool_v2");
-            localStorage.removeItem("cailaowai_faces_pool_v3");
-            localStorage.removeItem("cailaowai_faces_pool_v4");
-            localStorage.removeItem("cailaowai_faces_pool_v5");
-          } catch (e) {}
-        }
-      } catch (e) {}
-
-      try {
-        const raw = localStorage.getItem(POOL_JSON_CACHE_KEY);
-        if (raw) {
-          const c = JSON.parse(raw);
-          const fromCache = normalizePoolEntries({ entries: c.entries });
-          if (c.entries && applyPoolEntries(fromCache, "cache")) {
-            return;
-          }
-          try {
-            localStorage.removeItem(POOL_JSON_CACHE_KEY);
-          } catch (e) {}
-        }
-      } catch (e) {}
-
+      /* UI-test: RandomUser-only — skip self-hosted faces-pool.json and its localStorage cache. */
       const built = await buildHugeHumanPoolQuick();
       if (built.length >= MIN_POOL_ENTRIES && !poolDistributionBroken(built)) {
-        applyPoolEntries(built, "randomuser.me (live)");
+        applyPoolEntries(built, "randomuser.me (live, UI-test)");
         return;
       }
 
@@ -1291,12 +1265,13 @@
       if (poolLine) {
         poolLine.replaceChildren();
         poolLine.appendChild(
-          document.createTextNode("本题库当前使用 " + POOL.length + " 条。头像与 API 国籍本就不一致（RandomUser 文档）；要按相貌出题请用 ")
+          document.createTextNode(
+            "UI-test：当前约 " + POOL.length + " 条头像（randomuser.me 在线 / 内置），与 API 国籍字段无必然对应。主版本（本地题库）见 "
+          )
         );
         const a = document.createElement("a");
-        a.className = "pool-review-link";
-        a.href = `${gameOriginBase()}/pool-review.html`;
-        a.textContent = "题库校对";
+        a.href = `${gameOriginBase()}/`;
+        a.textContent = "首页";
         poolLine.appendChild(a);
         poolLine.appendChild(document.createTextNode("。"));
       }
