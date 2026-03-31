@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>猜老外 · 题库校对</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; background: #1a1d23; color: #eee; }
+    body { max-width: 1100px; margin: 0 auto; padding: 16px; line-height: 1.5; }
+    h1 { font-size: 1.25rem; margin: 0 0 8px; }
+    .lead { opacity: 0.9; font-size: 0.92rem; margin-bottom: 16px; }
+    .lead a { color: #7cb8ff; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+    button, .btn {
+      background: #2d6cdf; color: #fff; border: none; padding: 8px 14px; border-radius: 8px;
+      cursor: pointer; font-size: 0.9rem;
+    }
+    button.secondary { background: #444a55; }
+    button.danger { background: #a33; }
+    input[type="url"], input[type="text"], select, textarea {
+      background: #252830; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 6px 8px;
+      font-size: 0.88rem;
+    }
+    textarea { width: 100%; min-height: 56px; box-sizing: border-box; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { border-bottom: 1px solid #333; padding: 8px 6px; vertical-align: middle; text-align: left; }
+    th { color: #9ab; font-weight: 600; }
+    img.thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; background: #333; }
+    .row-bad { outline: 2px solid #c65; }
+    tr:has(input[type="checkbox"]:not(:checked)) { opacity: 0.65; }
+    .status { font-size: 0.85rem; margin-top: 8px; color: #8a9; }
+    .add-row { margin-top: 20px; padding: 12px; background: #252830; border-radius: 10px; }
+    code { font-size: 0.85em; background: #333; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>题库校对</h1>
+  <p class="lead">
+    RandomUser 官方文档写明：<strong>照片与 <code>nat</code> 国籍无关</strong>，只有姓名、地址等随国籍变。
+    这里按你的判断改「国别」、取消勾选「采用」可暂时剔除坏题，导出 JSON 覆盖仓库里的
+    <code>cai-laowai/data/faces-pool.json</code> 后重新部署。
+    游戏入口：<a id="game-link" href="/">猜老外</a>
+  </p>
+  <div class="toolbar">
+    <button type="button" id="btn-load">从服务器重新加载</button>
+    <button type="button" class="secondary" id="btn-export">下载 faces-pool.json</button>
+    <span class="status" id="status"></span>
+  </div>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>id</th>
+          <th>图</th>
+          <th>国别</th>
+          <th>采用</th>
+          <th>备注</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="add-row">
+    <strong>手动添加一行</strong>（建议用可长期访问的图片 URL 或日后放到 <code>/assets/</code>）<br />
+    <input type="url" id="add-img" placeholder="https://…" style="width:min(100%,420px);margin-top:8px;" />
+    <select id="add-code" style="margin-left:8px;"></select>
+    <button type="button" id="btn-add" style="margin-left:8px;">添加</button>
+  </div>
+
+  <script>
+    /** Keep in sync with index.html NAT_TO_ZH (RandomUser v1.4 nats). */
+    const NAT_TO_ZH = {
+      AU: "澳大利亚", BR: "巴西", CA: "加拿大", CH: "瑞士", DE: "德国", DK: "丹麦",
+      ES: "西班牙", FI: "芬兰", FR: "法国", GB: "英国", IE: "爱尔兰", IN: "印度",
+      IR: "伊朗", MX: "墨西哥", NL: "荷兰", NO: "挪威", NZ: "新西兰", RS: "塞尔维亚",
+      TR: "土耳其", UA: "乌克兰", US: "美国",
+    };
+
+    const CODES = Object.keys(NAT_TO_ZH).sort();
+    let entries = [];
+    let dataVersion = 0;
+
+    function base() {
+      const p = window.location.pathname || "";
+      if (p.includes("/cai-laowai")) {
+        return window.location.origin + p.split("/cai-laowai")[0];
+      }
+      return window.location.origin;
+    }
+
+    function fillCodeSelect(sel, val) {
+      sel.innerHTML = "";
+      for (const c of CODES) {
+        const o = document.createElement("option");
+        o.value = c;
+        o.textContent = `${c} ${NAT_TO_ZH[c]}`;
+        sel.appendChild(o);
+      }
+      if (val && CODES.includes(val)) sel.value = val;
+    }
+
+    const addCode = document.getElementById("add-code");
+    fillCodeSelect(addCode, "US");
+
+    function setStatus(t) {
+      document.getElementById("status").textContent = t || "";
+    }
+
+    function rowId(i, e) {
+      if (e && e.id) return String(e.id);
+      return `row-${i}`;
+    }
+
+    function render() {
+      const tb = document.getElementById("tbody");
+      tb.innerHTML = "";
+      entries.forEach((e, i) => {
+        const tr = document.createElement("tr");
+        if (e.reviewed === false) tr.classList.add("row-bad");
+        tr.dataset.index = String(i);
+
+        const td0 = document.createElement("td");
+        td0.textContent = String(i + 1);
+
+        const tdId = document.createElement("td");
+        const inpId = document.createElement("input");
+        inpId.type = "text";
+        inpId.value = rowId(i, e);
+        inpId.style.width = "7rem";
+        inpId.dataset.field = "id";
+        tdId.appendChild(inpId);
+
+        const tdImg = document.createElement("td");
+        const im = document.createElement("img");
+        im.className = "thumb";
+        im.alt = "";
+        im.referrerPolicy = "no-referrer";
+        im.src = e.img || "";
+        tdImg.appendChild(im);
+
+        const tdCode = document.createElement("td");
+        const sel = document.createElement("select");
+        fillCodeSelect(sel, e.code);
+        sel.dataset.field = "code";
+        tdCode.appendChild(sel);
+
+        const tdOk = document.createElement("td");
+        const ck = document.createElement("input");
+        ck.type = "checkbox";
+        ck.checked = e.reviewed !== false;
+        ck.title = "不采用则游戏中跳过（需剩余可用题 ≥15 条）";
+        tdOk.appendChild(ck);
+
+        const tdNote = document.createElement("td");
+        const note = document.createElement("input");
+        note.type = "text";
+        note.value = e.note || "";
+        note.style.width = "min(200px,28vw)";
+        note.placeholder = "可选";
+        note.dataset.field = "note";
+        tdNote.appendChild(note);
+
+        const tdDel = document.createElement("td");
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "danger";
+        del.textContent = "删";
+        del.addEventListener("click", () => {
+          entries.splice(i, 1);
+          render();
+        });
+        tdDel.appendChild(del);
+
+        tr.appendChild(td0);
+        tr.appendChild(tdId);
+        tr.appendChild(tdImg);
+        tr.appendChild(tdCode);
+        tr.appendChild(tdOk);
+        tr.appendChild(tdNote);
+        tr.appendChild(tdDel);
+        tb.appendChild(tr);
+      });
+    }
+
+    function readTableIntoEntries() {
+      const rows = document.querySelectorAll("#tbody tr");
+      rows.forEach((tr, i) => {
+        const e = entries[i];
+        if (!e) return;
+        const idInp = tr.querySelector('input[data-field="id"]');
+        const sel = tr.querySelector("select");
+        const ck = tr.querySelector('input[type="checkbox"]');
+        const note = tr.querySelector('input[data-field="note"]');
+        if (idInp) e.id = idInp.value.trim() || `row-${i}`;
+        if (sel) {
+          e.code = sel.value;
+          e.zh = NAT_TO_ZH[e.code] || e.code;
+        }
+        if (ck) e.reviewed = ck.checked;
+        if (note) e.note = note.value.trim();
+      });
+    }
+
+    function buildPayload() {
+      readTableIntoEntries();
+      const now = new Date().toISOString();
+      return {
+        version: Math.floor(Date.now() / 1000),
+        generated_at: now,
+        source: "manual-curation",
+        notes:
+          "Curated via pool-review.html. Set reviewed:false to exclude from play (when enough others remain).",
+        entries: entries.map((e) => ({
+          id: e.id,
+          img: e.img,
+          code: e.code,
+          zh: e.zh || NAT_TO_ZH[e.code],
+          reviewed: e.reviewed !== false,
+          note: e.note || "",
+        })),
+      };
+    }
+
+    async function loadPool() {
+      setStatus("加载中…");
+      try {
+        const r = await fetch(`${base()}/data/faces-pool.json`, { cache: "no-store" });
+        if (!r.ok) throw new Error(String(r.status));
+        const data = await r.json();
+        dataVersion = data.version || 0;
+        const raw = data.entries || [];
+        entries = [];
+        let n = 0;
+        const seen = new Set();
+        for (const row of raw) {
+          if (!row || !row.img) continue;
+          if (seen.has(row.img)) continue;
+          seen.add(row.img);
+          const code = String(row.code || "").toUpperCase();
+          if (!NAT_TO_ZH[code]) continue;
+          entries.push({
+            id: row.id != null && String(row.id).trim() ? String(row.id).trim() : `row-${n++}`,
+            img: row.img,
+            code,
+            zh: row.zh || NAT_TO_ZH[code],
+            reviewed: row.reviewed !== false,
+            note: typeof row.note === "string" ? row.note : "",
+          });
+        }
+        setStatus(`已加载 ${entries.length} 条（version ${dataVersion}）`);
+        render();
+      } catch (e) {
+        setStatus("加载失败：" + (e && e.message ? e.message : e));
+      }
+    }
+
+    function downloadJson() {
+      readTableIntoEntries();
+      const payload = buildPayload();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "faces-pool.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus("已下载 faces-pool.json，替换仓库内同名文件并部署。");
+    }
+
+    document.getElementById("btn-load").addEventListener("click", loadPool);
+    document.getElementById("btn-export").addEventListener("click", downloadJson);
+    document.getElementById("btn-add").addEventListener("click", () => {
+      const url = document.getElementById("add-img").value.trim();
+      if (!url) {
+        setStatus("请填写图片 URL");
+        return;
+      }
+      const code = document.getElementById("add-code").value;
+      entries.push({
+        id: `new-${Date.now()}`,
+        img: url,
+        code,
+        zh: NAT_TO_ZH[code],
+        reviewed: true,
+        note: "",
+      });
+      document.getElementById("add-img").value = "";
+      render();
+      setStatus("已添加 1 行，记得最后下载 JSON。");
+    });
+
+    document.getElementById("game-link").href = base() + "/";
+    loadPool();
+  </script>
+</body>
+</html>

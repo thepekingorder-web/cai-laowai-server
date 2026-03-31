@@ -29,6 +29,14 @@ def root_page():
     return FileResponse(str(p), media_type="text/html; charset=utf-8")
 
 
+@app.get("/pool-review.html")
+def pool_review_page():
+    p = GAME / "pool-review.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="pool-review.html missing")
+    return FileResponse(str(p), media_type="text/html; charset=utf-8")
+
+
 @app.get("/data/faces-manifest.json")
 def faces_manifest():
     p = DATA / "faces-manifest.json"

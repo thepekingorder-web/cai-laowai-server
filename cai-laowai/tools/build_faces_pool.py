@@ -2,12 +2,19 @@
 """
 Build cai-laowai/data/faces-pool.json.
 
-Each country uses only RandomUser `nat=<country>` batches (no global mix), so e.g. India
-rows come from the India generator only. One portrait URL = one row.
+RandomUser documents that **pictures are not affected by nat** — only metadata is. Portrait
+URLs are a shared global library (~100×2), so this file is a **placeholder** until you
+curate labels in pool-review.html or host your own photos.
+
+We still assign at most one row per portrait URL. Country order is **shuffled each round**
+so AU (alphabetically first) does not claim almost every unique index.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import random
+import re
 import ssl
 import sys
 import time
@@ -16,6 +23,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from http.client import IncompleteRead
+from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,7 +56,9 @@ NAT_TO_ZH = {
 BATCH = 250
 SLEEP_S = 0.35
 MAX_RETRIES = 5
-MAX_ROUNDS = 80
+MAX_ROUNDS = 200
+# Max new unique portraits per country per outer round (RandomUser has ~197 unique URLs total).
+NEW_PER_COUNTRY_PER_ROUND = 5
 UA = "cai-laowai-pool/4.1-roundrobin"
 
 
@@ -56,6 +66,13 @@ def api_nat(code_upper: str) -> str:
     if code_upper == "GB":
         return "gb"
     return code_upper.lower()
+
+
+def portrait_id(pic: str) -> str:
+    m = re.search(r"/(men|women)/(\d+)\.jpg", pic)
+    if m:
+        return f"ru-{m.group(1)}-{m.group(2)}"
+    return "ru-" + hashlib.sha256(pic.encode()).hexdigest()[:12]
 
 
 def fetch(qs: dict) -> list[dict]:
@@ -88,21 +105,35 @@ def main() -> None:
 
     seen: set[str] = set()
     entries: list[dict] = []
+    codes = list(NAT_TO_ZH.keys())
 
-    def push(nat: str, pic: str) -> None:
+    def push(nat: str, pic: str) -> bool:
         nat = nat.upper()
         if nat not in NAT_TO_ZH or not pic or pic in seen:
-            return
+            return False
         seen.add(pic)
-        entries.append({"img": pic, "code": nat, "zh": NAT_TO_ZH[nat]})
+        entries.append(
+            {
+                "id": portrait_id(pic),
+                "img": pic,
+                "code": nat,
+                "zh": NAT_TO_ZH[nat],
+                "reviewed": True,
+                "note": "",
+            }
+        )
+        return True
 
-    codes = list(NAT_TO_ZH.keys())
-    # RandomUser reuses ~200 stock photos total; round-robin so every country gets some rows.
+    # RandomUser reuses ~200 stock photos; shuffle order + cap new rows per country per round
+    # so we do not exhaust unique URLs under only a few nats.
     for rnd in range(MAX_ROUNDS):
         if len(entries) >= want:
             break
         before_round = len(entries)
-        for i, code_u in enumerate(codes):
+        order = codes[:]
+        random.shuffle(order)
+        round_added: dict[str, int] = defaultdict(int)
+        for i, code_u in enumerate(order):
             if len(entries) >= want:
                 break
             rows = fetch(
@@ -114,12 +145,14 @@ def main() -> None:
                 }
             )
             for row in rows:
+                if round_added[code_u] >= NEW_PER_COUNTRY_PER_ROUND:
+                    break
                 nat = (row.get("nat") or "").upper()
                 if nat != code_u:
                     continue
                 pic = (row.get("picture") or {}).get("large")
-                if pic:
-                    push(nat, pic)
+                if pic and push(nat, pic):
+                    round_added[code_u] += 1
         time.sleep(SLEEP_S)
         print("round", rnd, "total", len(entries), flush=True)
         if len(entries) == before_round:
@@ -129,8 +162,11 @@ def main() -> None:
         "version": int(datetime.now(timezone.utc).timestamp()),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "randomuser.me",
-        "pool_policy": "per_country_nat_only",
-        "notes": "Each row from that country’s RandomUser nat= stream only.",
+        "pool_policy": "shuffle_plus_per_round_nat_cap",
+        "notes": (
+            "RandomUser: pictures are NOT tied to nat (see their docs). "
+            "Curate in /pool-review.html or replace with self-hosted photos."
+        ),
         "entries": entries,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)

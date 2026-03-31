@@ -403,6 +403,17 @@
       min-height: 1.2em;
     }
     .hidden { display: none !important; }
+    .disclaimer-muted {
+      font-size: 0.78rem;
+      opacity: 0.88;
+      margin-top: 10px;
+      line-height: 1.45;
+    }
+    .disclaimer-muted a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
   </style>
 </head>
 <body>
@@ -446,6 +457,12 @@
         <div class="choices" id="choices"></div>
       </div>
       <p class="footer-note prose-cjk">点选答案后自动下一题</p>
+      <p class="footer-note prose-cjk disclaimer-muted" id="play-disclaimer">
+        图片来源 randomuser.me：官方说明<strong>头像与国籍字段无关</strong>，题目仅为娱乐。
+        需要按相貌标注国别请用
+        <a class="pool-review-link" href="#">题库校对</a>
+        导出 JSON 后替换服务器上的 <code style="font-size:0.85em">data/faces-pool.json</code>。
+      </p>
     </section>
 
     <section id="screen-result" class="screen">
@@ -464,8 +481,11 @@
   </div>
 
   <script>
-    /** RandomUser nationalities we use (API `nat`); humans only. Prototype — licensing TBD. */
-    /* Matches RandomUser `nat` values (no JP/KR in their generator as of 2026). */
+    /**
+     * RandomUser `nat` codes (v1.4). IMPORTANT: their docs say **pictures are NOT tied to nationality**
+     * — only names/phones/location follow `nat`. Stock portrait URLs are shared globally, so “猜长相”
+     * against API labels is logically wrong unless you **curate** (`reviewed`) or self-host photos.
+     */
     const NAT_TO_ZH = {
       AU: "澳大利亚", BR: "巴西", CA: "加拿大", CH: "瑞士", DE: "德国", DK: "丹麦",
       ES: "西班牙", FI: "芬兰", FR: "法国", GB: "英国", IE: "爱尔兰", IN: "印度",
@@ -485,31 +505,31 @@
     }
 
     const FALLBACK_POOL = [
-      { img: "https://randomuser.me/api/portraits/women/71.jpg", code: "US", zh: "美国" },
-      { img: "https://randomuser.me/api/portraits/women/96.jpg", code: "GB", zh: "英国" },
-      { img: "https://randomuser.me/api/portraits/men/1.jpg", code: "IE", zh: "爱尔兰" },
-      { img: "https://randomuser.me/api/portraits/women/54.jpg", code: "BR", zh: "巴西" },
-      { img: "https://randomuser.me/api/portraits/men/34.jpg", code: "MX", zh: "墨西哥" },
-      { img: "https://randomuser.me/api/portraits/men/63.jpg", code: "UA", zh: "乌克兰" },
-      { img: "https://randomuser.me/api/portraits/women/83.jpg", code: "FR", zh: "法国" },
-      { img: "https://randomuser.me/api/portraits/women/52.jpg", code: "DE", zh: "德国" },
-      { img: "https://randomuser.me/api/portraits/men/50.jpg", code: "AU", zh: "澳大利亚" },
-      { img: "https://randomuser.me/api/portraits/men/13.jpg", code: "TR", zh: "土耳其" },
-      { img: "https://randomuser.me/api/portraits/women/29.jpg", code: "CA", zh: "加拿大" },
-      { img: "https://randomuser.me/api/portraits/men/96.jpg", code: "ES", zh: "西班牙" },
-      { img: "https://randomuser.me/api/portraits/men/11.jpg", code: "NL", zh: "荷兰" },
-      { img: "https://randomuser.me/api/portraits/women/22.jpg", code: "NZ", zh: "新西兰" },
-      { img: "https://randomuser.me/api/portraits/men/66.jpg", code: "NO", zh: "挪威" },
-      { img: "https://randomuser.me/api/portraits/men/55.jpg", code: "DK", zh: "丹麦" },
-      { img: "https://randomuser.me/api/portraits/women/12.jpg", code: "CH", zh: "瑞士" },
-      { img: "https://randomuser.me/api/portraits/men/3.jpg", code: "FI", zh: "芬兰" },
-      { img: "https://randomuser.me/api/portraits/men/37.jpg", code: "RS", zh: "塞尔维亚" },
+      { img: "https://randomuser.me/api/portraits/women/71.jpg", code: "US", zh: "美国", id: "fb-0", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/women/96.jpg", code: "GB", zh: "英国", id: "fb-1", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/1.jpg", code: "IE", zh: "爱尔兰", id: "fb-2", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/women/54.jpg", code: "BR", zh: "巴西", id: "fb-3", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/34.jpg", code: "MX", zh: "墨西哥", id: "fb-4", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/63.jpg", code: "UA", zh: "乌克兰", id: "fb-5", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/women/83.jpg", code: "FR", zh: "法国", id: "fb-6", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/women/52.jpg", code: "DE", zh: "德国", id: "fb-7", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/50.jpg", code: "AU", zh: "澳大利亚", id: "fb-8", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/13.jpg", code: "TR", zh: "土耳其", id: "fb-9", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/women/29.jpg", code: "CA", zh: "加拿大", id: "fb-10", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/96.jpg", code: "ES", zh: "西班牙", id: "fb-11", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/11.jpg", code: "NL", zh: "荷兰", id: "fb-12", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/women/22.jpg", code: "NZ", zh: "新西兰", id: "fb-13", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/66.jpg", code: "NO", zh: "挪威", id: "fb-14", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/55.jpg", code: "DK", zh: "丹麦", id: "fb-15", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/women/12.jpg", code: "CH", zh: "瑞士", id: "fb-16", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/3.jpg", code: "FI", zh: "芬兰", id: "fb-17", reviewed: true, note: "" },
+      { img: "https://randomuser.me/api/portraits/men/37.jpg", code: "RS", zh: "塞尔维亚", id: "fb-18", reviewed: true, note: "" },
     ];
 
     let POOL = FALLBACK_POOL.slice();
     let faceManifest = null;
     let poolBuilt = false;
-    const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v3";
+    const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v4";
     /** Only if hosted JSON + cache both fail (e.g. first open in strict WebView). */
     const QUICK_BUILD_TARGET = 120;
     const QUICK_BUILD_BUDGET_MS = 8000;
@@ -539,13 +559,25 @@
       const raw = data && data.entries ? data.entries : Array.isArray(data) ? data : [];
       const out = [];
       const seen = new Set();
+      let anon = 0;
       for (const row of raw) {
         if (!row || !row.img || typeof row.img !== "string") continue;
         const code = String(row.code || "").toUpperCase();
         if (!NAT_TO_ZH[code]) continue;
         if (seen.has(row.img)) continue;
         seen.add(row.img);
-        out.push({ img: row.img, code, zh: row.zh || NAT_TO_ZH[code] });
+        const idRaw = row.id != null && String(row.id).trim() !== "" ? String(row.id).trim() : "";
+        const id = idRaw || `row-${anon++}`;
+        const reviewed = row.reviewed === false ? false : true;
+        const note = typeof row.note === "string" ? row.note : "";
+        out.push({
+          img: row.img,
+          code,
+          zh: row.zh || NAT_TO_ZH[code],
+          id,
+          reviewed,
+          note,
+        });
       }
       return out;
     }
@@ -568,8 +600,11 @@
 
     function applyPoolEntries(entries, sourceLabel) {
       if (!entries || entries.length < MIN_POOL_ENTRIES) return false;
-      if (poolDistributionBroken(entries)) return false;
-      POOL = entries;
+      const playable = entries.filter((e) => e.reviewed !== false);
+      const chosen = playable.length >= MIN_POOL_ENTRIES ? playable : entries;
+      if (chosen.length < MIN_POOL_ENTRIES) return false;
+      if (poolDistributionBroken(chosen)) return false;
+      POOL = chosen;
       poolBuilt = true;
       faceManifest = {
         source: sourceLabel,
@@ -602,7 +637,14 @@
         if (!NAT_TO_ZH[nat] || !pic) return false;
         if (seen.has(pic)) return false;
         seen.add(pic);
-        out.push({ img: pic, code: nat, zh: NAT_TO_ZH[nat] });
+        out.push({
+          img: pic,
+          code: nat,
+          zh: NAT_TO_ZH[nat],
+          id: `ru-${out.length}`,
+          reviewed: true,
+          note: "",
+        });
         return true;
       }
 
@@ -648,6 +690,7 @@
             localStorage.removeItem(POOL_JSON_CACHE_KEY);
             localStorage.removeItem("cailaowai_faces_pool_v1");
             localStorage.removeItem("cailaowai_faces_pool_v2");
+            localStorage.removeItem("cailaowai_faces_pool_v3");
           } catch (e) {}
         }
       } catch (e) {}
@@ -698,8 +741,38 @@
     }
 
     function pickRounds() {
-      const shuffled = shuffle(POOL);
-      return shuffled.slice(0, Math.min(ROUNDS_PER_GAME, shuffled.length));
+      const pool = POOL;
+      const target = Math.min(ROUNDS_PER_GAME, pool.length);
+      const byCode = Object.create(null);
+      for (const r of pool) {
+        if (!byCode[r.code]) byCode[r.code] = [];
+        byCode[r.code].push(r);
+      }
+      for (const k of Object.keys(byCode)) {
+        byCode[k] = shuffle(byCode[k]);
+      }
+      const codes = shuffle(Object.keys(byCode));
+      const out = [];
+      while (out.length < target) {
+        let added = false;
+        for (const code of codes) {
+          if (out.length >= target) break;
+          const bucket = byCode[code];
+          if (!bucket.length) continue;
+          out.push(bucket.pop());
+          added = true;
+        }
+        if (!added) break;
+      }
+      const used = new Set(out);
+      for (const r of shuffle(pool)) {
+        if (out.length >= target) break;
+        if (!used.has(r)) {
+          out.push(r);
+          used.add(r);
+        }
+      }
+      return shuffle(out);
     }
 
     function makeOptions(round) {
@@ -1044,7 +1117,16 @@
       document.getElementById("final-score").textContent = String(finalScore);
       const poolLine = document.getElementById("pool-size-line");
       if (poolLine) {
-        poolLine.textContent = "本题库共 " + POOL.length + " 张头像（按各国分区生成）。";
+        poolLine.replaceChildren();
+        poolLine.appendChild(
+          document.createTextNode("本题库当前使用 " + POOL.length + " 条。头像与 API 国籍本就不一致（RandomUser 文档）；要按相貌出题请用 ")
+        );
+        const a = document.createElement("a");
+        a.className = "pool-review-link";
+        a.href = `${gameOriginBase()}/pool-review.html`;
+        a.textContent = "题库校对";
+        poolLine.appendChild(a);
+        poolLine.appendChild(document.createTextNode("。"));
       }
       document.getElementById("share-hint").textContent = "";
       show("result");
@@ -1092,6 +1174,13 @@
       show("intro");
     });
     document.getElementById("btn-share").addEventListener("click", shareScore);
+
+    (function wirePoolReviewLinks() {
+      const base = gameOriginBase();
+      document.querySelectorAll("a.pool-review-link").forEach((a) => {
+        a.href = `${base}/pool-review.html`;
+      });
+    })();
 
     (function applyQueryScore() {
       const m = window.location.search.match(/[?&]score=(\d+)/);
