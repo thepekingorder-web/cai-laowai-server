@@ -1,0 +1,24 @@
+Deploy cai-laowai (separate from GotEyes)
+========================================
+
+1) Create a NEW empty repo on GitHub (e.g. cai-laowai-server). Do not use the goteyes repo.
+
+2) On your machine, in this folder (cai-laowai-server):
+   git init
+   git add .
+   git commit -m "Initial standalone cai-laowai server"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
+   git push -u origin main
+
+3) Railway: New Project -> Deploy from GitHub -> pick THAT new repo.
+   Root directory: leave default (repo root). Start command is in railway.json.
+
+4) Railway: Settings -> Networking -> generate a public URL, OR add custom domain
+   e.g. play.goteyes.ai (DNS CNAME to Railway as they instruct).
+
+5) Open https://YOUR-URL/  — the game loads at / (root). No /cai-laowai path on this app.
+
+6) To refresh the face pool later:
+   python3 cai-laowai/tools/build_faces_pool.py 1600
+   then commit and push cai-laowai/data/faces-pool.json

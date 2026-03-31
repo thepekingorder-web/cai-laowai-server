@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ff6a00" />
+  <title>猜老外</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --orange-deep: #e85a00;
+      --orange-mid: #ff7a1a;
+      --orange-glow: #ffb84d;
+      --blue-title: #0a1f8f;
+      --white: #ffffff;
+      --shadow: rgba(10, 31, 143, 0.35);
+      --wechat: #07c160;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      background: radial-gradient(ellipse 120% 80% at 20% 30%, var(--orange-glow) 0%, var(--orange-mid) 45%, var(--orange-deep) 100%);
+      color: var(--white);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .wrap {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+    }
+    .brand-compact {
+      display: none;
+      text-align: center;
+      padding: 4px 0 8px;
+    }
+    .brand-compact h1 {
+      font-family: "Noto Sans SC", sans-serif;
+      font-weight: 900;
+      font-size: 1.28rem;
+      letter-spacing: 0.06em;
+      color: #05147a;
+      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.95);
+      paint-order: stroke fill;
+      text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.45);
+    }
+    .wrap.show-brand .brand-compact { display: block; }
+
+    /* Splash — 猜老外 only, soda-poster typography (Wanta/Fanta vibe, no Latin) */
+    .splash {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 12px 0 32px;
+    }
+    .poster-frame {
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 4 / 5;
+      border-radius: 22px;
+      overflow: hidden;
+      pointer-events: none;
+      box-shadow:
+        0 0 0 5px rgba(255, 255, 255, 0.55),
+        0 22px 50px rgba(10, 31, 143, 0.45),
+        inset 0 0 80px rgba(255, 200, 100, 0.35);
+      transform: rotate(-3deg);
+      animation: pop 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .poster-canvas {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background:
+        radial-gradient(ellipse 95% 75% at 18% 22%, #fff4a8 0%, transparent 52%),
+        radial-gradient(ellipse 80% 90% at 92% 88%, #ff5a00 0%, transparent 45%),
+        radial-gradient(circle at 50% 120%, #c63a00 0%, #ff7a18 38%, #ff9c3d 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10% 5% 12%;
+    }
+    .poster-bubbles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.9;
+    }
+    .poster-cn-row {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(0, 2vw, 0.15em);
+    }
+    .poster-char {
+      font-family: "Noto Sans SC", sans-serif;
+      font-weight: 900;
+      font-size: clamp(4.25rem, 21vw, 6.5rem);
+      line-height: 1;
+      color: #05147a;
+      transform: rotate(var(--tilt, 0deg));
+      letter-spacing: 0;
+      /* thick white rim + stacked shadow ≈ packaging headline */
+      -webkit-text-stroke: clamp(2px, 0.6vw, 4px) #fff;
+      paint-order: stroke fill;
+      text-shadow:
+        4px 5px 0 rgba(255, 255, 255, 0.55),
+        7px 9px 0 rgba(5, 20, 100, 0.2),
+        0 14px 28px rgba(0, 0, 0, 0.18);
+      filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.35));
+    }
+    .poster-char:nth-child(1) { --tilt: -2.5deg; }
+    .poster-char:nth-child(2) { --tilt: 1.5deg; }
+    .poster-char:nth-child(3) { --tilt: -1deg; }
+    @keyframes pop {
+      from { transform: scale(0.85); opacity: 0.6; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .splash-btn {
+      position: relative;
+      z-index: 2;
+      margin-top: 28px;
+      font-family: "Noto Sans SC", sans-serif;
+      font-weight: 900;
+      font-size: 1.55rem;
+      padding: 20px 56px;
+      border: none;
+      border-radius: 999px;
+      background: var(--blue-title);
+      color: #fff;
+      box-shadow: 0 10px 0 #050a3d, 0 18px 40px rgba(0,0,0,0.28);
+      cursor: pointer;
+      animation: bounce-in 0.5s 0.2s both;
+      touch-action: manipulation;
+    }
+    .splash-btn:disabled {
+      opacity: 0.85;
+      cursor: wait;
+    }
+    @keyframes bounce-in {
+      from { transform: translateY(24px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .splash-btn:active {
+      transform: translateY(6px);
+      box-shadow: 0 4px 0 #050a3d, 0 8px 20px rgba(0,0,0,0.2);
+    }
+    .splash-friend {
+      margin-top: 28px;
+      font-weight: 800;
+      font-size: 0.95rem;
+      max-width: 280px;
+      line-height: 1.45;
+      text-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      opacity: 0.95;
+    }
+    .card-shell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 0;
+    }
+    .photo-card {
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 16px 40px var(--shadow), 0 0 0 4px rgba(255,255,255,0.35);
+      background: #111;
+      aspect-ratio: 3 / 4;
+      max-height: min(48vh, 400px);
+      margin: 0 auto;
+      width: 100%;
+    }
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .photo-card .loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.25);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .choices {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .choices button {
+      font-family: "Noto Sans SC", sans-serif;
+      font-weight: 800;
+      font-size: 1.05rem;
+      padding: 14px 16px;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      background: linear-gradient(180deg, #fff 0%, #e8ecff 100%);
+      color: var(--blue-title);
+      box-shadow: 0 6px 0 #0a1f8f, 0 10px 24px rgba(0,0,0,0.2);
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+      text-align: left;
+    }
+    .choices button .choice-flag {
+      font-size: 1.85rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .choices button .choice-label {
+      flex: 1;
+      min-width: 0;
+    }
+    .choices button:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #0a1f8f, 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .choices button:disabled {
+      opacity: 0.55;
+      cursor: default;
+      box-shadow: 0 3px 0 #555;
+    }
+    .choices button.correct {
+      background: linear-gradient(180deg, #c8ffd4 0%, #7dffc4 100%);
+      color: #064a2e;
+      box-shadow: 0 6px 0 #064a2e;
+    }
+    .choices button.wrong {
+      background: linear-gradient(180deg, #ffd4d4 0%, #ff9e9e 100%);
+      color: #5a0606;
+      box-shadow: 0 6px 0 #5a0606;
+    }
+    .footer-note {
+      text-align: center;
+      font-size: 0.65rem;
+      opacity: 0.85;
+      margin-top: 12px;
+    }
+    /* CJK: fewer lone characters stranded on the last line */
+    .prose-cjk {
+      text-wrap: pretty;
+      word-break: keep-all;
+      line-break: strict;
+    }
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .screen.active { display: flex; }
+    #screen-result.active {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #screen-result .result-actions {
+      margin-top: auto;
+    }
+
+    /* Result: compact score + high-contrast “final poster” (always readable on mobile) */
+    .result-hero {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+      padding: 8px 0 12px;
+    }
+    .result-hero .score-num {
+      font-family: Anton, sans-serif;
+      font-size: clamp(5rem, 28vw, 7rem);
+      font-weight: 400;
+      color: var(--blue-title);
+      text-shadow: 3px 3px 0 #fff, 6px 6px 0 rgba(10,31,143,0.15);
+      line-height: 1;
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 0.08em;
+    }
+    .result-hero .score-denom {
+      font-family: "Noto Sans SC", sans-serif;
+      font-weight: 900;
+      font-size: 0.38em;
+      opacity: 0.95;
+    }
+    .result-hero .score-tag {
+      font-weight: 800;
+      font-size: 0.9rem;
+      margin-top: 8px;
+      max-width: 280px;
+      line-height: 1.35;
+    }
+    .result-final-poster {
+      flex: 0 0 auto;
+      width: 100%;
+      margin: 12px 0 16px;
+      padding: 22px 20px 20px;
+      border-radius: 18px;
+      background: linear-gradient(165deg, #fffef8 0%, #fff 40%, #f0f4ff 100%);
+      border: 4px solid #0a1f8f;
+      box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.9),
+        0 16px 36px rgba(10, 31, 143, 0.35);
+      text-align: center;
+    }
+    .result-final-poster .poster-kicker {
+      font-family: Anton, sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      text-indent: 0.28em;
+      color: #0a1f8f;
+      opacity: 0.85;
+      margin-bottom: 12px;
+    }
+    .result-final-poster .poster-body {
+      font-family: "Noto Sans SC", sans-serif;
+      font-size: 0.98rem;
+      font-weight: 800;
+      line-height: 1.65;
+      color: #0a1f8f;
+      margin: 0;
+    }
+    .result-final-poster .poster-body p + p {
+      margin-top: 12px;
+    }
+    .stats-global {
+      margin: 14px 0 10px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.22);
+      border: 2px solid rgba(10, 31, 143, 0.25);
+      font-size: 0.88rem;
+      font-weight: 800;
+      line-height: 1.55;
+      text-align: center;
+      color: #fff;
+      text-shadow: 0 1px 2px var(--shadow);
+    }
+    .stats-global p + p {
+      margin-top: 8px;
+      opacity: 0.95;
+    }
+    .bgm-fab {
+      position: fixed;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      right: max(14px, env(safe-area-inset-right));
+      z-index: 120;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(10, 31, 143, 0.92);
+      color: #fff;
+      font-size: 1.2rem;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      touch-action: manipulation;
+    }
+    .bgm-fab:active {
+      transform: scale(0.94);
+    }
+
+    .sponsor {
+      margin-top: 8px;
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.2);
+      border: 2px dashed rgba(10,31,143,0.35);
+      text-align: center;
+    }
+    .sponsor .tag { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.2em; opacity: 0.9; }
+    .sponsor .name { font-size: 1.15rem; font-weight: 900; color: var(--blue-title); margin-top: 6px; }
+    .stats-strip {
+      margin-top: 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      opacity: 0.88;
+      text-align: center;
+    }
+    .result-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .btn-share {
+      font-family: "Noto Sans SC", sans-serif;
+      font-weight: 900;
+      font-size: 1.1rem;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #2ee88a 0%, var(--wechat) 100%);
+      color: #fff;
+      box-shadow: 0 6px 0 #056838, 0 12px 28px rgba(0,0,0,0.22);
+      cursor: pointer;
+    }
+    .btn-share:active { transform: translateY(4px); box-shadow: 0 2px 0 #056838; }
+    .big-btn {
+      font-family: "Noto Sans SC", sans-serif;
+      font-weight: 900;
+      font-size: 1.15rem;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      background: var(--blue-title);
+      color: #fff;
+      box-shadow: 0 8px 0 #050a3d, 0 14px 32px rgba(0,0,0,0.25);
+      cursor: pointer;
+    }
+    .big-btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #050a3d; }
+    .share-hint {
+      font-size: 0.65rem;
+      text-align: center;
+      opacity: 0.85;
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+    .credits-drawer {
+      margin-top: 10px;
+      font-size: 0.7rem;
+      text-align: left;
+      color: rgba(255, 255, 255, 0.92);
+    }
+    .credits-drawer summary {
+      cursor: pointer;
+      font-weight: 800;
+      list-style: none;
+    }
+    .credits-drawer summary::-webkit-details-marker { display: none; }
+    .credits-list {
+      margin: 10px 0 0;
+      padding-left: 1.1em;
+      line-height: 1.55;
+      max-height: 42vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .credits-list a {
+      color: #fff;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <button type="button" class="bgm-fab hidden" id="btn-bgm" aria-label="背景音乐">🎵</button>
+  <div class="wrap" id="app-wrap">
+    <header class="brand-compact" aria-hidden="true">
+      <h1>猜老外</h1>
+    </header>
+
+    <section id="screen-intro" class="screen active">
+      <div class="splash">
+        <figure class="poster-frame" aria-label="猜老外">
+          <div class="poster-canvas">
+            <svg class="poster-bubbles" viewBox="0 0 320 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="36" cy="300" r="48" fill="rgba(255,255,255,0.2)" />
+              <circle cx="268" cy="56" r="38" fill="rgba(255,255,255,0.16)" />
+              <circle cx="250" cy="320" r="22" fill="rgba(255,210,90,0.4)" />
+              <circle cx="110" cy="48" r="28" fill="rgba(10,40,160,0.1)" />
+              <ellipse cx="160" cy="392" rx="100" ry="18" fill="rgba(255,255,255,0.14)" />
+            </svg>
+            <h1 class="poster-cn-row">
+              <span class="poster-char">猜</span><span class="poster-char">老</span><span class="poster-char">外</span>
+            </h1>
+          </div>
+        </figure>
+        <p id="intro-challenge" class="splash-friend hidden prose-cjk"></p>
+        <button type="button" class="splash-btn" id="btn-start">开始</button>
+      </div>
+    </section>
+
+    <section id="screen-play" class="screen">
+      <div class="hud">
+        <span id="hud-round">第 1 / 10 题</span>
+        <span id="hud-score">得分 0</span>
+      </div>
+      <div class="card-shell">
+        <div class="photo-card">
+          <img id="face-img" alt="" decoding="async" />
+          <div class="loading hidden" id="img-loading">加载中…</div>
+        </div>
+        <div class="choices" id="choices"></div>
+      </div>
+      <p class="footer-note prose-cjk">点选答案后自动下一题</p>
+    </section>
+
+    <section id="screen-result" class="screen">
+      <div class="result-hero">
+        <div class="score-num"><span id="final-score">0</span><span class="score-denom">/10</span></div>
+        <div class="score-tag">你猜对了几国？</div>
+      </div>
+      <div class="result-final-poster prose-cjk" role="img" aria-label="结束提示">
+        <p class="poster-kicker">本局结束</p>
+        <div class="poster-body">
+          <p>瞎猜小游戏而已，别当真。</p>
+          <p>长相猜不了国籍；多玩几次就记得住套路啦。</p>
+        </div>
+      </div>
+      <div id="global-compare" class="stats-global prose-cjk hidden" aria-live="polite"></div>
+      <div class="sponsor" id="sponsor-slot">
+        <div class="tag">本局由</div>
+        <div class="name" id="sponsor-name">预留广告位</div>
+        <div class="tag" style="margin-top:8px;letter-spacing:0.1em">TITLE SPONSOR</div>
+      </div>
+      <p class="stats-strip">本地试玩次数：<span id="play-count">—</span></p>
+      <details class="credits-drawer hidden" id="credits-drawer">
+        <summary>肖像来源与许可</summary>
+        <ul class="credits-list" id="credits-list"></ul>
+      </details>
+      <div class="result-actions">
+        <button type="button" class="btn-share" id="btn-share">分享成绩</button>
+        <p class="share-hint prose-cjk" id="share-hint">支持系统分享；在微信内若无法弹出，我们会把文案和链接复制到剪贴板。</p>
+        <button type="button" class="big-btn" id="btn-again">再玩一局</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /** RandomUser nationalities we use (API `nat`); humans only. Prototype — licensing TBD. */
+    /* Matches RandomUser `nat` values (no JP/KR in their generator as of 2026). */
+    const NAT_TO_ZH = {
+      AU: "澳大利亚", BR: "巴西", CA: "加拿大", CH: "瑞士", DE: "德国", DK: "丹麦",
+      ES: "西班牙", FI: "芬兰", FR: "法国", GB: "英国", IE: "爱尔兰", IN: "印度",
+      IR: "伊朗", MX: "墨西哥", NL: "荷兰", NO: "挪威", NZ: "新西兰", RS: "塞尔维亚",
+      TR: "土耳其", UA: "乌克兰", US: "美国",
+    };
+
+    const ANSWER_COUNTRIES = Object.keys(NAT_TO_ZH).map((code) => ({
+      code,
+      zh: NAT_TO_ZH[code],
+    }));
+
+    /** IN/IR only from `&nat=` API stream so labels match RandomUser regional sets. */
+    const NAT_FETCH_ONLY = { IN: "in", IR: "ir" };
+    const RESTRICTED_NAT = new Set(Object.keys(NAT_FETCH_ONLY));
+
+    const FALLBACK_POOL = [
+      { img: "https://randomuser.me/api/portraits/women/71.jpg", code: "US", zh: "美国" },
+      { img: "https://randomuser.me/api/portraits/women/96.jpg", code: "GB", zh: "英国" },
+      { img: "https://randomuser.me/api/portraits/men/1.jpg", code: "IE", zh: "爱尔兰" },
+      { img: "https://randomuser.me/api/portraits/women/54.jpg", code: "BR", zh: "巴西" },
+      { img: "https://randomuser.me/api/portraits/men/34.jpg", code: "MX", zh: "墨西哥" },
+      { img: "https://randomuser.me/api/portraits/men/63.jpg", code: "UA", zh: "乌克兰" },
+      { img: "https://randomuser.me/api/portraits/women/83.jpg", code: "FR", zh: "法国" },
+      { img: "https://randomuser.me/api/portraits/women/52.jpg", code: "DE", zh: "德国" },
+      { img: "https://randomuser.me/api/portraits/men/50.jpg", code: "AU", zh: "澳大利亚" },
+      { img: "https://randomuser.me/api/portraits/men/13.jpg", code: "TR", zh: "土耳其" },
+      { img: "https://randomuser.me/api/portraits/women/29.jpg", code: "CA", zh: "加拿大" },
+      { img: "https://randomuser.me/api/portraits/men/96.jpg", code: "ES", zh: "西班牙" },
+      { img: "https://randomuser.me/api/portraits/men/11.jpg", code: "NL", zh: "荷兰" },
+      { img: "https://randomuser.me/api/portraits/women/22.jpg", code: "NZ", zh: "新西兰" },
+      { img: "https://randomuser.me/api/portraits/men/66.jpg", code: "NO", zh: "挪威" },
+      { img: "https://randomuser.me/api/portraits/men/55.jpg", code: "DK", zh: "丹麦" },
+      { img: "https://randomuser.me/api/portraits/women/12.jpg", code: "CH", zh: "瑞士" },
+      { img: "https://randomuser.me/api/portraits/men/3.jpg", code: "FI", zh: "芬兰" },
+      { img: "https://randomuser.me/api/portraits/men/37.jpg", code: "RS", zh: "塞尔维亚" },
+    ];
+
+    let POOL = FALLBACK_POOL.slice();
+    let faceManifest = null;
+    let poolBuilt = false;
+    const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v1";
+    /** Only if hosted JSON + cache both fail (e.g. first open in strict WebView). */
+    const QUICK_BUILD_TARGET = 120;
+    const QUICK_BUILD_MAX_SEED = 800;
+    const QUICK_BUILD_BUDGET_MS = 5000;
+    const FETCH_TIMEOUT_MS = 3200;
+
+    function fetchWithTimeout(url, ms, init = {}) {
+      const ctrl = new AbortController();
+      const id = setTimeout(() => ctrl.abort(), ms);
+      const opts = { mode: "cors", signal: ctrl.signal, ...init };
+      return fetch(url, opts).finally(() => clearTimeout(id));
+    }
+
+    /** Standalone app: origin only. Legacy: still works if ever mounted under /cai-laowai on another host. */
+    function gameOriginBase() {
+      const p = window.location.pathname || "";
+      if (p.includes("/cai-laowai")) {
+        return window.location.origin + p.split("/cai-laowai")[0] + "/cai-laowai";
+      }
+      return window.location.origin;
+    }
+
+    function manifestAssetUrl(file) {
+      return `${gameOriginBase()}/assets/${file}`;
+    }
+
+    function normalizePoolEntries(data) {
+      const raw = data && data.entries ? data.entries : Array.isArray(data) ? data : [];
+      const out = [];
+      const seen = new Set();
+      for (const row of raw) {
+        if (!row || !row.img || typeof row.img !== "string") continue;
+        const code = String(row.code || "").toUpperCase();
+        if (!NAT_TO_ZH[code]) continue;
+        if (seen.has(row.img)) continue;
+        seen.add(row.img);
+        out.push({ img: row.img, code, zh: row.zh || NAT_TO_ZH[code] });
+      }
+      return out;
+    }
+
+    function applyPoolEntries(entries, sourceLabel) {
+      if (!entries || entries.length < 40) return false;
+      POOL = entries;
+      poolBuilt = true;
+      faceManifest = {
+        source: sourceLabel,
+        entries: POOL,
+        country_labels: NAT_TO_ZH,
+      };
+      return true;
+    }
+
+    async function buildHugeHumanPoolQuick() {
+      const seen = new Set();
+      const out = [];
+      const t0 = Date.now();
+      function overBudget() {
+        return Date.now() - t0 > QUICK_BUILD_BUDGET_MS;
+      }
+
+      async function pullBatch(url) {
+        try {
+          const r = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
+          if (!r.ok) return [];
+          const data = await r.json();
+          return data.results || [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function pushRow(nat, pic) {
+        if (!NAT_TO_ZH[nat] || !pic) return false;
+        if (seen.has(pic)) return false;
+        seen.add(pic);
+        out.push({ img: pic, code: nat, zh: NAT_TO_ZH[nat] });
+        return true;
+      }
+
+      for (const [codeU, natParam] of Object.entries(NAT_FETCH_ONLY)) {
+        let got = 0;
+        for (let seed = 0; seed < 400 && got < 24 && out.length < QUICK_BUILD_TARGET && !overBudget(); seed++) {
+          const rows = await pullBatch(
+            `https://randomuser.me/api/?results=10&nat=${natParam}&seed=${seed}&noinfo`
+          );
+          for (const row of rows) {
+            const nat = (row.nat || "").toUpperCase();
+            if (nat !== codeU) continue;
+            const pic = row.picture && row.picture.large;
+            if (pushRow(nat, pic)) got += 1;
+          }
+        }
+      }
+
+      for (let seed = 0; seed < QUICK_BUILD_MAX_SEED && out.length < QUICK_BUILD_TARGET && !overBudget(); seed++) {
+        const rows = await pullBatch(
+          `https://randomuser.me/api/?results=10&seed=${seed}&noinfo`
+        );
+        for (const row of rows) {
+          const nat = (row.nat || "").toUpperCase();
+          if (!NAT_TO_ZH[nat] || RESTRICTED_NAT.has(nat)) continue;
+          const pic = row.picture && row.picture.large;
+          if (pushRow(nat, pic)) break;
+        }
+        if (seed % 80 === 0 && seed > 0) await new Promise((r) => setTimeout(r, 0));
+      }
+
+      return out;
+    }
+
+    async function ensurePool() {
+      if (poolBuilt && POOL.length >= 40) return;
+
+      const poolUrl = `${gameOriginBase()}/data/faces-pool.json`;
+      try {
+        const r = await fetchWithTimeout(poolUrl, 10000);
+        if (r.ok) {
+          const data = await r.json();
+          const entries = normalizePoolEntries(data);
+          if (applyPoolEntries(entries, "faces-pool.json")) {
+            try {
+              localStorage.setItem(
+                POOL_JSON_CACHE_KEY,
+                JSON.stringify({ v: data.version || 0, entries: POOL })
+              );
+            } catch (e) {}
+            return;
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const raw = localStorage.getItem(POOL_JSON_CACHE_KEY);
+        if (raw) {
+          const c = JSON.parse(raw);
+          if (c.entries && applyPoolEntries(normalizePoolEntries({ entries: c.entries }), "cache")) {
+            return;
+          }
+        }
+      } catch (e) {}
+
+      const built = await buildHugeHumanPoolQuick();
+      if (built.length >= 40) {
+        applyPoolEntries(built, "randomuser.me (live)");
+        return;
+      }
+
+      POOL = FALLBACK_POOL.slice();
+      poolBuilt = true;
+      faceManifest = null;
+    }
+
+    function renderCreditsList() {
+      const drawer = document.getElementById("credits-drawer");
+      const ul = document.getElementById("credits-list");
+      if (!drawer || !ul) return;
+      drawer.classList.remove("hidden");
+      ul.innerHTML = "";
+      const li = document.createElement("li");
+      li.textContent =
+        "图片来自 RandomUser。本题约 " +
+        POOL.length +
+        " 张不重复的脸；大题库在网站的 faces-pool.json 里，GitHub 会定期更新。演示用。";
+      ul.appendChild(li);
+    }
+
+    /** ISO 3166-1 alpha-2 → flag emoji (regional indicators). */
+    function flagEmoji(iso2) {
+      const s = String(iso2 || "").toUpperCase();
+      if (s.length !== 2 || /[^A-Z]/.test(s)) return "🌐";
+      const base = 0x1f1e6;
+      return String.fromCodePoint(base + (s.charCodeAt(0) - 65), base + (s.charCodeAt(1) - 65));
+    }
+
+    const ROUNDS_PER_GAME = 10;
+    const STORAGE_PLAYS = "cailaowai_plays_v1";
+
+    const PRICING_TIERS = [
+      { minPlays: 0, maxPlays: 4999, titleSponsor: 500 },
+      { minPlays: 5000, maxPlays: 19999, titleSponsor: 2000 },
+      { minPlays: 20000, maxPlays: 49999, titleSponsor: 8000 },
+      { minPlays: 50000, maxPlays: Infinity, titleSponsor: 25000 },
+    ];
+
+    function tierForPlays(n) {
+      return PRICING_TIERS.find((t) => n >= t.minPlays && n <= t.maxPlays) || PRICING_TIERS[0];
+    }
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function pickRounds() {
+      const shuffled = shuffle(POOL);
+      return shuffled.slice(0, Math.min(ROUNDS_PER_GAME, shuffled.length));
+    }
+
+    function makeOptions(round) {
+      const correctZh = round.zh;
+      const correctCode = round.code;
+      const correct = { zh: correctZh, code: correctCode };
+      const candidates = ANSWER_COUNTRIES.filter((c) => c.code !== correctCode);
+      const shuffled = shuffle(candidates);
+      const picked = [];
+      const seen = new Set([correctZh]);
+      for (const c of shuffled) {
+        if (seen.has(c.zh)) continue;
+        picked.push({ zh: c.zh, code: c.code });
+        seen.add(c.zh);
+        if (picked.length >= 2) break;
+      }
+      return shuffle([correct, ...picked]);
+    }
+
+    const wrap = document.getElementById("app-wrap");
+    const screens = {
+      intro: document.getElementById("screen-intro"),
+      play: document.getElementById("screen-play"),
+      result: document.getElementById("screen-result"),
+    };
+
+    function show(name) {
+      Object.values(screens).forEach((el) => el.classList.remove("active"));
+      screens[name].classList.add("active");
+      wrap.classList.toggle("show-brand", name !== "intro");
+    }
+
+    let audioCtx;
+    let masterGainNode = null;
+    let bgmGainNode = null;
+    let sillyBgmInterval = null;
+    let bgmMuted = false;
+    const SILLY_MELODY = [392, 440, 494, 523, 587, 659, 587, 523];
+    let sillyNoteIdx = 0;
+
+    function getAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx;
+    }
+
+    function sfxBus() {
+      const ctx = getAudio();
+      if (!masterGainNode) {
+        masterGainNode = ctx.createGain();
+        masterGainNode.gain.value = 1;
+        masterGainNode.connect(ctx.destination);
+        bgmGainNode = ctx.createGain();
+        bgmGainNode.gain.value = 0.065;
+        bgmGainNode.connect(masterGainNode);
+      }
+      return masterGainNode;
+    }
+
+    function unlockAudio() {
+      const ctx = getAudio();
+      if (ctx.state === "suspended") ctx.resume();
+    }
+
+    function updateBgmFab() {
+      const fab = document.getElementById("btn-bgm");
+      if (!fab) return;
+      fab.textContent = bgmMuted ? "🔇" : "🎵";
+      fab.setAttribute("aria-label", bgmMuted ? "开启背景音乐" : "关闭背景音乐");
+    }
+
+    function syncSillyBgmInterval() {
+      if (bgmMuted) {
+        if (sillyBgmInterval) {
+          clearInterval(sillyBgmInterval);
+          sillyBgmInterval = null;
+        }
+        return;
+      }
+      if (sillyBgmInterval) return;
+      sillyBgmInterval = setInterval(() => {
+        try {
+          if (bgmMuted || !bgmGainNode) return;
+          const ctx = getAudio();
+          const f = SILLY_MELODY[sillyNoteIdx % SILLY_MELODY.length];
+          sillyNoteIdx += 1;
+          const oompah = sillyNoteIdx % 6 === 0;
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = oompah ? "square" : "triangle";
+          o.frequency.value = oompah ? f * 0.48 : f * (sillyNoteIdx % 9 === 0 ? 1.12 : 1);
+          o.connect(g);
+          g.connect(bgmGainNode);
+          const t0 = ctx.currentTime;
+          g.gain.setValueAtTime(oompah ? 0.1 : 0.085, t0);
+          g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.11);
+          o.start(t0);
+          o.stop(t0 + 0.12);
+        } catch (e) {}
+      }, 148);
+    }
+
+    function startSillyBgm() {
+      try {
+        sfxBus();
+        unlockAudio();
+        if (bgmGainNode) bgmGainNode.gain.value = bgmMuted ? 0 : 0.065;
+        const fab = document.getElementById("btn-bgm");
+        if (fab) fab.classList.remove("hidden");
+        updateBgmFab();
+        syncSillyBgmInterval();
+      } catch (e) {}
+    }
+
+    function tone(freq, dur, type = "sine", vol = 0.09) {
+      const ctx = getAudio();
+      const bus = sfxBus();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      o.connect(g);
+      g.connect(bus);
+      const t0 = ctx.currentTime;
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+      o.start(t0);
+      o.stop(t0 + dur);
+    }
+
+    function sfxClick() {
+      try { tone(620, 0.04, "square", 0.05); } catch (e) {}
+    }
+
+    function sfxCorrect() {
+      try {
+        const ctx = getAudio();
+        const bus = sfxBus();
+        const t0 = ctx.currentTime;
+        [[523.25, 0], [659.25, 0.09], [783.99, 0.18]].forEach(([f, delay]) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = "sine";
+          o.frequency.value = f;
+          o.connect(g);
+          g.connect(bus);
+          g.gain.setValueAtTime(0.1, t0 + delay);
+          g.gain.exponentialRampToValueAtTime(0.001, t0 + delay + 0.14);
+          o.start(t0 + delay);
+          o.stop(t0 + delay + 0.14);
+        });
+      } catch (e) {}
+    }
+
+    function sfxWrong() {
+      try {
+        tone(130, 0.22, "sawtooth", 0.1);
+        setTimeout(() => tone(95, 0.2, "sawtooth", 0.08), 90);
+      } catch (e) {}
+    }
+
+    document.getElementById("btn-bgm").addEventListener("click", () => {
+      bgmMuted = !bgmMuted;
+      if (bgmGainNode) bgmGainNode.gain.value = bgmMuted ? 0 : 0.065;
+      updateBgmFab();
+      syncSillyBgmInterval();
+      try { sfxClick(); } catch (e) {}
+    });
+
+    let rounds = [];
+    let idx = 0;
+    let score = 0;
+    let answered = false;
+
+    function bumpPlayCount() {
+      const n = parseInt(localStorage.getItem(STORAGE_PLAYS) || "0", 10) + 1;
+      localStorage.setItem(STORAGE_PLAYS, String(n));
+      return n;
+    }
+
+    function renderRound() {
+      answered = false;
+      const r = rounds[idx];
+      document.getElementById("hud-round").textContent = `第 ${idx + 1} / ${rounds.length} 题`;
+      document.getElementById("hud-score").textContent = `得分 ${score}`;
+
+      const img = document.getElementById("face-img");
+      const load = document.getElementById("img-loading");
+      load.classList.remove("hidden");
+      load.textContent = "加载中…";
+      img.onload = () => load.classList.add("hidden");
+      img.onerror = () => {
+        load.classList.remove("hidden");
+        load.textContent = "图片加载失败";
+      };
+      img.src = r.img;
+
+      const opts = makeOptions(r);
+      const ch = document.getElementById("choices");
+      ch.innerHTML = "";
+      opts.forEach((opt) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.zh = opt.zh;
+        const flagEl = document.createElement("span");
+        flagEl.className = "choice-flag";
+        flagEl.setAttribute("aria-hidden", "true");
+        flagEl.textContent = flagEmoji(opt.code);
+        const lab = document.createElement("span");
+        lab.className = "choice-label";
+        lab.textContent = opt.zh;
+        b.appendChild(flagEl);
+        b.appendChild(lab);
+        b.addEventListener("click", () => {
+          sfxClick();
+          onPick(b, opt.zh, r);
+        });
+        ch.appendChild(b);
+      });
+    }
+
+    function onPick(btn, label, round) {
+      if (answered) return;
+      answered = true;
+      const correct = round.zh;
+      if (label === correct) sfxCorrect();
+      else sfxWrong();
+      const buttons = document.querySelectorAll("#choices button");
+      buttons.forEach((x) => {
+        x.disabled = true;
+        if (x.dataset.zh === correct) x.classList.add("correct");
+        else if (x === btn && label !== correct) x.classList.add("wrong");
+      });
+      if (label === correct) score += 1;
+      document.getElementById("hud-score").textContent = `得分 ${score}`;
+      setTimeout(() => nextRound(), 950);
+    }
+
+    function nextRound() {
+      idx += 1;
+      if (idx >= rounds.length) void finish();
+      else renderRound();
+    }
+
+    function shareUrl() {
+      const base = window.location.origin + window.location.pathname;
+      return `${base.replace(/\/$/, "")}?score=${score}`;
+    }
+
+    function shareText() {
+      return `我在「猜老外」得了 ${score}/10 分，看你猜不猜得中？`;
+    }
+
+    async function shareScore() {
+      sfxClick();
+      const text = shareText();
+      const url = shareUrl();
+      const hint = document.getElementById("share-hint");
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "猜老外", text: `${text} ${url}`, url });
+          hint.textContent = "分享已调起。";
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") return;
+        }
+      }
+
+      const combined = `${text}\n${url}`;
+      try {
+        await navigator.clipboard.writeText(combined);
+        hint.textContent = "已复制到剪贴板，打开微信粘贴给好友即可。";
+      } catch (e) {
+        window.prompt("复制以下全部内容到微信：", combined);
+        hint.textContent = "请长按上方文字手动复制。";
+      }
+    }
+
+    function formatPlayerCount(n) {
+      return Math.max(0, Math.floor(Number(n) || 0)).toLocaleString("zh-CN");
+    }
+
+    async function submitGlobalStats(finalScore) {
+      const wrapEl = document.getElementById("global-compare");
+      if (!wrapEl) return;
+      const base = gameOriginBase();
+      wrapEl.classList.remove("hidden");
+      wrapEl.textContent = "";
+      const loading = document.createElement("p");
+      loading.textContent = "正在同步全站数据…";
+      wrapEl.appendChild(loading);
+      try {
+        await fetchWithTimeout(base + "/api/stats/record", 8000, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ score: finalScore }),
+        });
+      } catch (e) {
+        /* summary may still work on older deploys */
+      }
+      let data;
+      try {
+        const r = await fetchWithTimeout(base + "/api/stats/summary", 8000);
+        if (!r.ok) throw new Error("summary");
+        data = await r.json();
+      } catch (e) {
+        wrapEl.textContent = "";
+        const p = document.createElement("p");
+        p.textContent = "全站排行暂时拉不到，本地照样能玩。";
+        wrapEl.appendChild(p);
+        return;
+      }
+      const total = Math.max(0, parseInt(data.total_plays, 10) || 0);
+      const bs = Array.isArray(data.by_score) ? data.by_score : [];
+      let below = 0;
+      for (let i = 0; i < finalScore; i++) below += parseInt(bs[i], 10) || 0;
+      const pctBelow = total > 1 ? Math.round((100 * below) / total) : null;
+      const med = typeof data.median_score === "number" ? data.median_score : null;
+
+      wrapEl.textContent = "";
+      const p1 = document.createElement("p");
+      p1.textContent = "全站累计约 " + formatPlayerCount(total) + " 局游戏。";
+      wrapEl.appendChild(p1);
+      if (total >= 10 && pctBelow != null && pctBelow >= 52) {
+        const p2 = document.createElement("p");
+        p2.textContent = "你这局比其中约 " + pctBelow + "% 的人猜对更多。";
+        wrapEl.appendChild(p2);
+      } else if (total >= 8 && med != null && finalScore > med) {
+        const p2 = document.createElement("p");
+        p2.textContent = "你这局比大多数人猜对更多。";
+        wrapEl.appendChild(p2);
+      } else if (total >= 4) {
+        const p2 = document.createElement("p");
+        p2.textContent = "多玩几局，全站榜单会越来越准。";
+        wrapEl.appendChild(p2);
+      }
+    }
+
+    async function finish() {
+      const plays = bumpPlayCount();
+      const finalScore = score;
+      document.getElementById("final-score").textContent = String(finalScore);
+      document.getElementById("play-count").textContent = String(plays);
+      const tier = tierForPlays(plays);
+      document.getElementById("sponsor-name").textContent =
+        "预留广告位 · 演示价：冠名 ¥" + tier.titleSponsor + "/天起";
+      document.getElementById("share-hint").textContent =
+        "支持系统分享；在微信内若无法弹出，我们会把文案和链接复制到剪贴板。";
+      renderCreditsList();
+      show("result");
+      await submitGlobalStats(finalScore);
+    }
+
+    async function startGame() {
+      unlockAudio();
+      await ensurePool();
+      rounds = pickRounds();
+      if (rounds.length < 3) {
+        alert("题库太小。");
+        return false;
+      }
+      idx = 0;
+      score = 0;
+      show("play");
+      renderRound();
+      startSillyBgm();
+      return true;
+    }
+
+    const btnStart = document.getElementById("btn-start");
+    const btnStartDefaultLabel = btnStart.textContent;
+    btnStart.addEventListener("click", async () => {
+      if (btnStart.disabled) return;
+      unlockAudio();
+      btnStart.disabled = true;
+      btnStart.textContent = "加载中…";
+      try {
+        const ok = await startGame();
+        if (!ok) {
+          btnStart.disabled = false;
+          btnStart.textContent = btnStartDefaultLabel;
+        }
+      } catch (e) {
+        btnStart.disabled = false;
+        btnStart.textContent = btnStartDefaultLabel;
+        alert("加载失败，请检查网络后重试。");
+      }
+    });
+    document.getElementById("btn-again").addEventListener("click", () => {
+      btnStart.disabled = false;
+      btnStart.textContent = btnStartDefaultLabel;
+      show("intro");
+    });
+    document.getElementById("btn-share").addEventListener("click", shareScore);
+
+    (function applyQueryScore() {
+      const m = window.location.search.match(/[?&]score=(\d+)/);
+      if (m) {
+        const s = parseInt(m[1], 10);
+        if (!Number.isNaN(s) && s >= 0 && s <= 10) {
+          const el = document.getElementById("intro-challenge");
+          el.textContent = `朋友刚得了 ${s}/10 分，你能超过吗？`;
+          el.classList.remove("hidden");
+          el.removeAttribute("hidden");
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
