@@ -316,11 +316,21 @@
       font-size: 0.42em;
       opacity: 0.92;
     }
+    .result-hero .score-sub {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-top: 6px;
+      opacity: 0.94;
+    }
     .result-hero .score-tag {
       font-weight: 700;
       font-size: 0.875rem;
-      margin-top: 10px;
+      margin-top: 8px;
       opacity: 0.95;
+    }
+    .result-hero .pct-suffix {
+      font-size: 0.52em;
+      margin-left: 0.02em;
     }
     .result-hero .pool-size-line {
       font-size: 0.8125rem;
@@ -446,7 +456,7 @@
 
     <section id="screen-play" class="screen">
       <div class="hud">
-        <span id="hud-round">第 1 / 10 题</span>
+        <span id="hud-round">第 1 / 12 题</span>
         <span id="hud-score">得分 0</span>
       </div>
       <div class="card-shell">
@@ -467,8 +477,11 @@
 
     <section id="screen-result" class="screen">
       <div class="result-hero">
-        <div class="score-num"><span id="final-score">0</span><span class="score-denom">/10</span></div>
-        <div class="score-tag">猜对了几国？</div>
+        <div class="score-num">
+          <span id="final-pct">0</span><span class="score-denom pct-suffix">%</span>
+        </div>
+        <p class="score-sub prose-cjk" id="final-fraction">答对 0 / 12 题</p>
+        <div class="score-tag">本局正确率 · 下方为全站对比</div>
         <p class="pool-size-line" id="pool-size-line" aria-live="polite"></p>
       </div>
       <div id="global-compare" class="stats-global prose-cjk hidden" aria-live="polite"></div>
@@ -728,7 +741,7 @@
       return String.fromCodePoint(base + (s.charCodeAt(0) - 65), base + (s.charCodeAt(1) - 65));
     }
 
-    const ROUNDS_PER_GAME = 10;
+    const ROUNDS_PER_GAME = 12;
     const STORAGE_PLAYS = "cailaowai_plays_v1";
 
     function shuffle(arr) {
@@ -1018,11 +1031,13 @@
 
     function shareUrl() {
       const base = window.location.origin + window.location.pathname;
-      return `${base.replace(/\/$/, "")}?score=${score}`;
+      const pct = Math.round((100 * score) / ROUNDS_PER_GAME);
+      return `${base.replace(/\/$/, "")}?score=${score}&pct=${pct}`;
     }
 
     function shareText() {
-      return `我在「猜老外」得了 ${score}/10 分，看你猜不猜得中？`;
+      const pct = Math.round((100 * score) / ROUNDS_PER_GAME);
+      return `我在「猜老外」${ROUNDS_PER_GAME} 题答对 ${score} 题（正确率 ${pct}%），你能超过吗？`;
     }
 
     async function shareScore() {
@@ -1086,35 +1101,80 @@
         return;
       }
       const total = Math.max(0, parseInt(data.total_plays, 10) || 0);
-      const bs = Array.isArray(data.by_score) ? data.by_score : [];
+      let bs = Array.isArray(data.by_score) ? data.by_score.map((x) => parseInt(x, 10) || 0) : [];
+      while (bs.length < ROUNDS_PER_GAME + 1) bs.push(0);
+      bs = bs.slice(0, ROUNDS_PER_GAME + 1);
+
       let below = 0;
-      for (let i = 0; i < finalScore; i++) below += parseInt(bs[i], 10) || 0;
-      const pctBelow = total > 1 ? Math.round((100 * below) / total) : null;
+      for (let i = 0; i < finalScore; i++) below += bs[i] || 0;
+      let above = 0;
+      for (let i = finalScore + 1; i < bs.length; i++) above += bs[i] || 0;
+
+      const pctBeat = total > 1 ? Math.round((100 * below) / total) : null;
+      const pctWorseThanYou = total > 1 ? Math.round((100 * above) / total) : null;
+      const meanRaw =
+        typeof data.mean_score === "number" && !Number.isNaN(data.mean_score)
+          ? data.mean_score
+          : null;
+      let meanGuess = meanRaw;
+      if (meanGuess == null && total > 0) {
+        let acc = 0;
+        for (let i = 0; i < bs.length; i++) acc += i * (bs[i] || 0);
+        meanGuess = acc / total;
+      }
+      const meanPct =
+        meanGuess != null && meanGuess >= 0
+          ? Math.round((100 * meanGuess) / ROUNDS_PER_GAME)
+          : null;
       const med = typeof data.median_score === "number" ? data.median_score : null;
 
       wrapEl.textContent = "";
       const p1 = document.createElement("p");
-      p1.textContent = "全站累计约 " + formatPlayerCount(total) + " 局游戏。";
+      if (total >= 3 && meanGuess != null && meanPct != null) {
+        p1.textContent =
+          "全站约 " +
+          formatPlayerCount(total) +
+          " 局 · 平均答对 " +
+          meanGuess.toFixed(1) +
+          " / " +
+          ROUNDS_PER_GAME +
+          " 题（约 " +
+          meanPct +
+          "% 正确率）。";
+      } else {
+        p1.textContent = "全站累计约 " + formatPlayerCount(total) + " 局游戏。";
+      }
       wrapEl.appendChild(p1);
-      if (total >= 10 && pctBelow != null && pctBelow >= 52) {
+
+      if (total >= 5 && pctBeat != null && pctWorseThanYou != null) {
         const p2 = document.createElement("p");
-        p2.textContent = "你这局比其中约 " + pctBelow + "% 的人猜对更多。";
-        wrapEl.appendChild(p2);
-      } else if (total >= 8 && med != null && finalScore > med) {
-        const p2 = document.createElement("p");
-        p2.textContent = "你这局比大多数人猜对更多。";
+        p2.textContent =
+          "按答对题数，你超过了全站约 " +
+          pctBeat +
+          "% 的玩家；约有 " +
+          pctWorseThanYou +
+          "% 的玩家比你答得更好。";
         wrapEl.appendChild(p2);
       } else if (total >= 4) {
         const p2 = document.createElement("p");
-        p2.textContent = "多玩几局，全站榜单会越来越准。";
+        p2.textContent = "多玩几局，全站对比会越来越准。";
         wrapEl.appendChild(p2);
+      }
+
+      if (total >= 8 && med != null && finalScore > med) {
+        const p3 = document.createElement("p");
+        p3.textContent = "你这局也高于全站中位数（约 " + med.toFixed(1) + " 题）。";
+        wrapEl.appendChild(p3);
       }
     }
 
     async function finish() {
       bumpPlayCount();
       const finalScore = score;
-      document.getElementById("final-score").textContent = String(finalScore);
+      const pct = Math.round((100 * finalScore) / ROUNDS_PER_GAME);
+      document.getElementById("final-pct").textContent = String(pct);
+      document.getElementById("final-fraction").textContent =
+        `答对 ${finalScore} / ${ROUNDS_PER_GAME} 题`;
       const poolLine = document.getElementById("pool-size-line");
       if (poolLine) {
         poolLine.replaceChildren();
@@ -1184,11 +1244,14 @@
 
     (function applyQueryScore() {
       const m = window.location.search.match(/[?&]score=(\d+)/);
+      const pm = window.location.search.match(/[?&]pct=(\d+)/);
       if (m) {
         const s = parseInt(m[1], 10);
-        if (!Number.isNaN(s) && s >= 0 && s <= 10) {
+        if (!Number.isNaN(s) && s >= 0 && s <= ROUNDS_PER_GAME) {
           const el = document.getElementById("intro-challenge");
-          el.textContent = `朋友刚得了 ${s}/10 分，你能超过吗？`;
+          let pct = pm ? parseInt(pm[1], 10) : Math.round((100 * s) / ROUNDS_PER_GAME);
+          if (Number.isNaN(pct) || pct < 0 || pct > 100) pct = Math.round((100 * s) / ROUNDS_PER_GAME);
+          el.textContent = `朋友 ${ROUNDS_PER_GAME} 题答对 ${s} 题（${pct}%），你能超过吗？`;
           el.classList.remove("hidden");
           el.removeAttribute("hidden");
         }
