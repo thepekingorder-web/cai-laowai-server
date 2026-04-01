@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Face pool · manual country check</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #12141a;
+      color: #e8eaef;
+      --accent: #3b82f6;
+      --ok: #22c55e;
+      --muted: #8b92a5;
+    }
+    body { max-width: 720px; margin: 0 auto; padding: 16px; line-height: 1.45; }
+    h1 { font-size: 1.2rem; margin: 0 0 4px; font-weight: 700; }
+    .sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 16px; }
+    .sub a { color: #93c5fd; }
+    .stats { background: #1e222c; padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; font-size: 0.9rem; }
+    .card {
+      background: #1e222c;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .preview-wrap {
+      background: #0a0c10;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-wrap img {
+      max-width: 100%;
+      max-height: 70vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+    label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; }
+    select, input[type="text"], button {
+      font-size: 1rem;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #3d4454;
+      background: #252a36;
+      color: #fff;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    select { cursor: pointer; }
+    button {
+      width: auto;
+      cursor: pointer;
+      border: none;
+      font-weight: 600;
+    }
+    button.primary { background: var(--accent); }
+    button.secondary { background: #3d4454; }
+    button.ghost { background: transparent; border: 1px solid #3d4454; }
+    .row { margin-bottom: 12px; }
+    .nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+    .nav span { color: var(--muted); font-size: 0.9rem; }
+    .reviewed-row { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+    .reviewed-row input { width: 20px; height: 20px; }
+    .meta { font-size: 0.78rem; color: var(--muted); word-break: break-all; margin-top: 8px; }
+    .meta a { color: #93c5fd; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .status { font-size: 0.85rem; color: var(--ok); min-height: 1.2em; }
+    .filter { margin-bottom: 12px; font-size: 0.88rem; }
+    .filter label { display: inline; margin-right: 12px; }
+    kbd { background: #333; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <h1>Face pool · manual check</h1>
+
+  <div class="card" style="border:2px solid var(--accent);margin-bottom:16px;">
+    <strong style="font-size:1.05rem;">Start here (no broken links)</strong>
+    <p class="sub" style="margin:8px 0 0;">
+      <strong>Option A — easiest:</strong> In Finder, open the <code>cai-laowai</code> folder in this project and
+      <strong>double-click</strong> <code>Open Pool QA.command</code>. A terminal window opens and Safari/Chrome loads this page automatically; photos load from <code>assets/</code>.
+    </p>
+    <p class="sub" style="margin:8px 0 0;">
+      <strong>Option B — from Cursor:</strong> Right‑click <code>cai-laowai/Open Pool QA.command</code> → Open (or run <code>bash "cai-laowai/Open Pool QA.command"</code> from the repo root).
+    </p>
+    <p class="sub" style="margin:8px 0 0;">
+      <strong>Option C — you already use uvicorn:</strong> start the game server, then open
+      <a href="http://127.0.0.1:8000/pool-qa.html" id="link-localhost">http://127.0.0.1:8000/pool-qa.html</a>
+      (change port if needed).
+    </p>
+  </div>
+
+  <p class="sub">
+    Confirm each photo’s country or pick a new one, then mark <strong>Reviewed</strong> when you’re sure.
+    Download JSON and replace <code>cai-laowai/data/faces-pool.json</code> in the repo.
+    <span id="extra-nav"></span>
+  </p>
+
+  <div class="card" id="offline-panel" hidden>
+    <strong>Load JSON from disk</strong> (use this if the page was opened as a file, or the server isn’t running)
+    <div class="row" style="margin-top:10px;">
+      <label for="file-countries">countries.json</label>
+      <input type="file" id="file-countries" accept=".json,application/json" />
+    </div>
+    <div class="row">
+      <label for="file-pool">faces-pool.json</label>
+      <input type="file" id="file-pool" accept=".json,application/json" />
+    </div>
+    <button type="button" class="primary" id="btn-load-files">Load selected files</button>
+    <p class="sub" style="margin-top:10px;margin-bottom:0;">
+      Files live in <code>cai-laowai/data/</code>. For images to show without a server, open this HTML from disk via
+      <code>file:///…/cai-laowai/pool-qa.html</code> (same folder as <code>assets/</code>).
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <button type="button" class="primary" id="btn-load">Reload pool from server</button>
+    <button type="button" class="secondary" id="btn-download">Download faces-pool.json</button>
+  </div>
+  <p class="status" id="status"></p>
+
+  <div class="stats" id="stats">Load the pool to begin.</div>
+
+  <div class="filter">
+    <label><input type="checkbox" id="only-unreviewed" checked /> Show unreviewed first</label>
+    <label><input type="checkbox" id="shuffle" /> Shuffle order</label>
+  </div>
+
+  <div class="card" id="card" hidden>
+    <div class="preview-wrap">
+      <img id="photo" alt="Pool photo" referrerpolicy="no-referrer" />
+    </div>
+    <div class="row">
+      <label for="country">Country (game answer)</label>
+      <select id="country"></select>
+    </div>
+    <div class="row">
+      <label for="note">Note (optional)</label>
+      <input type="text" id="note" placeholder="e.g. wrong crop — fixed country" />
+    </div>
+    <div class="reviewed-row">
+      <input type="checkbox" id="reviewed" />
+      <label for="reviewed" style="margin:0;font-size:1rem;color:#e8eaef;">Reviewed — country is correct for this game</label>
+    </div>
+    <div class="meta" id="meta"></div>
+    <div class="nav">
+      <button type="button" class="secondary" id="btn-prev">← Previous</button>
+      <button type="button" class="secondary" id="btn-next">Next →</button>
+      <span id="pos"></span>
+    </div>
+    <p class="sub" style="margin-top:12px;margin-bottom:0;">
+      Keys: <kbd>←</kbd> <kbd>→</kbd> prev/next · <kbd>r</kbd> toggle reviewed · <kbd>s</kbd> download JSON
+    </p>
+  </div>
+
+  <script>
+    function isFileProtocol() {
+      return window.location.protocol === "file:";
+    }
+
+    function base() {
+      const p = window.location.pathname || "";
+      if (p.includes("/cai-laowai")) {
+        return window.location.origin + p.split("/cai-laowai")[0] + "/cai-laowai";
+      }
+      return window.location.origin;
+    }
+
+    function assetUrl(row) {
+      if (row.file && String(row.file).trim()) {
+        const f = String(row.file).trim().replace(/^\/?assets\//, "");
+        if (isFileProtocol()) {
+          const path = f.startsWith("faces/") ? "assets/" + f : "assets/" + f;
+          try {
+            return new URL(path, window.location.href).href;
+          } catch (e) {
+            return "";
+          }
+        }
+        return `${base()}/assets/${f}`;
+      }
+      if (row.img && String(row.img).trim()) return String(row.img).trim();
+      return "";
+    }
+
+    function applyPoolData(cj, pj) {
+      countries = (cj.countries || [])
+        .map((row) => ({
+          code: String(row.code || "").toUpperCase(),
+          zh: String(row.zh || row.code || ""),
+          en: String(row.en || ""),
+        }))
+        .filter((x) => x.code);
+      countries.sort((a, b) => a.code.localeCompare(b.code));
+
+      poolMeta = {
+        source: pj.source,
+        pool_policy: pj.pool_policy,
+        notes: pj.notes,
+      };
+      workEntries = (pj.entries || []).map((row) => ({ ...row }));
+      if (workEntries.length === 0) throw new Error("no entries in faces-pool.json");
+
+      document.getElementById("offline-panel").hidden = true;
+      computeOrder();
+      show();
+      setStatus("Loaded " + workEntries.length + " entries.", true);
+    }
+
+    let poolMeta = {};
+    let workEntries = [];
+    let order = [];
+    let pos = 0;
+    let countries = [];
+
+    function setStatus(t, ok) {
+      const el = document.getElementById("status");
+      el.textContent = t || "";
+      el.style.color = ok === false ? "#f87171" : "var(--ok)";
+    }
+
+    function buildCountrySelect() {
+      const sel = document.getElementById("country");
+      sel.innerHTML = "";
+      for (const c of countries) {
+        const o = document.createElement("option");
+        o.value = c.code;
+        o.textContent = `${c.code} — ${c.zh}${c.en ? " (" + c.en + ")" : ""}`;
+        sel.appendChild(o);
+      }
+    }
+
+    function computeOrder() {
+      const n = workEntries.length;
+      const idx = Array.from({ length: n }, (_, i) => i);
+      const unrev = document.getElementById("only-unreviewed").checked;
+      const shuf = document.getElementById("shuffle").checked;
+
+      let list = idx.map((i) => ({ i, r: workEntries[i].reviewed !== false }));
+      if (unrev) {
+        list.sort((a, b) => Number(a.r) - Number(b.r));
+      }
+      const out = list.map((x) => x.i);
+      if (shuf) {
+        for (let k = out.length - 1; k > 0; k--) {
+          const j = Math.floor(Math.random() * (k + 1));
+          [out[k], out[j]] = [out[j], out[k]];
+        }
+      }
+      order = out;
+      pos = 0;
+    }
+
+    function flushCurrentToEntry() {
+      const i = order[pos];
+      if (i === undefined) return;
+      const e = workEntries[i];
+      const code = document.getElementById("country").value.toUpperCase();
+      const c = countries.find((x) => x.code === code);
+      e.code = code;
+      e.zh = c ? c.zh : code;
+      e.note = document.getElementById("note").value.trim();
+      e.reviewed = document.getElementById("reviewed").checked;
+    }
+
+    function show() {
+      const i = order[pos];
+      const card = document.getElementById("card");
+      if (i === undefined || workEntries.length === 0) {
+        card.hidden = true;
+        return;
+      }
+      card.hidden = false;
+      const e = workEntries[i];
+      const url = assetUrl(e);
+      const img = document.getElementById("photo");
+      img.src = url || "";
+      img.alt = e.id || "";
+
+      buildCountrySelect();
+      const code = String(e.code || "").toUpperCase();
+      const sel = document.getElementById("country");
+      if ([...sel.options].some((o) => o.value === code)) sel.value = code;
+      else if (code) {
+        const o = document.createElement("option");
+        o.value = code;
+        o.textContent = code + " (not in list)";
+        sel.appendChild(o);
+        sel.value = code;
+      }
+
+      document.getElementById("note").value = typeof e.note === "string" ? e.note : "";
+      document.getElementById("reviewed").checked = e.reviewed !== false;
+
+      const parts = [];
+      if (e.id) parts.push("id: " + e.id);
+      if (e.file) parts.push("file: " + e.file);
+      if (e.license) parts.push("license: " + e.license);
+      if (e.credit) parts.push("credit: " + e.credit);
+      if (e.source_url) {
+        parts.push('source: <a href="' + e.source_url + '" target="_blank" rel="noopener">Commons</a>');
+      }
+      document.getElementById("meta").innerHTML = parts.join(" · ");
+
+      const reviewedN = workEntries.filter((x) => x.reviewed !== false).length;
+      document.getElementById("pos").textContent =
+        "Item " + (pos + 1) + " of " + order.length + " in this order · " + reviewedN + "/" + workEntries.length + " marked reviewed";
+      document.getElementById("stats").textContent =
+        workEntries.length + " photos loaded · " + reviewedN + " reviewed · " + (workEntries.length - reviewedN) + " left to check";
+    }
+
+    function go(delta) {
+      flushCurrentToEntry();
+      pos = Math.max(0, Math.min(order.length - 1, pos + delta));
+      show();
+    }
+
+    async function loadPool() {
+      if (isFileProtocol()) {
+        document.getElementById("offline-panel").hidden = false;
+        setStatus("Opened as a local file — pick countries.json and faces-pool.json below, or use Open Pool QA.command.", false);
+        return;
+      }
+      setStatus("Loading…");
+      try {
+        const [rc, rp] = await Promise.all([
+          fetch(`${base()}/data/countries.json`, { cache: "no-store" }),
+          fetch(`${base()}/data/faces-pool.json`, { cache: "no-store" }),
+        ]);
+        if (!rc.ok) throw new Error("countries.json " + rc.status);
+        if (!rp.ok) throw new Error("faces-pool.json " + rp.status);
+        const cj = await rc.json();
+        const pj = await rp.json();
+        applyPoolData(cj, pj);
+      } catch (e) {
+        document.getElementById("offline-panel").hidden = false;
+        setStatus("Could not load from server: " + (e && e.message ? e.message : e) + " — use the file pickers below.", false);
+      }
+    }
+
+    function readJsonFile(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          try {
+            resolve(JSON.parse(String(r.result)));
+          } catch (err) {
+            reject(err);
+          }
+        };
+        r.onerror = () => reject(new Error("read failed"));
+        r.readAsText(file);
+      });
+    }
+
+    async function loadFromDiskFiles() {
+      const fc = document.getElementById("file-countries").files[0];
+      const fp = document.getElementById("file-pool").files[0];
+      if (!fc || !fp) {
+        setStatus("Choose both countries.json and faces-pool.json.", false);
+        return;
+      }
+      setStatus("Reading files…");
+      try {
+        const [cj, pj] = await Promise.all([readJsonFile(fc), readJsonFile(fp)]);
+        applyPoolData(cj, pj);
+      } catch (e) {
+        setStatus("Failed: " + (e && e.message ? e.message : e), false);
+      }
+    }
+
+    function downloadJson() {
+      flushCurrentToEntry();
+      const payload = {
+        version: Math.floor(Date.now() / 1000),
+        generated_at: new Date().toISOString(),
+        source: poolMeta.source || "wikimedia-commons",
+        pool_policy: poolMeta.pool_policy || "manual_qa",
+        notes:
+          (poolMeta.notes ? poolMeta.notes + " " : "") +
+          "Manual QA via pool-qa.html (country + reviewed flags).",
+        entries: workEntries.map((e) => {
+          const o = { ...e };
+          delete o._displayUrl;
+          return o;
+        }),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "faces-pool.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus("Download started. Replace cai-laowai/data/faces-pool.json in the repo.", true);
+    }
+
+    document.getElementById("btn-load").addEventListener("click", loadPool);
+    document.getElementById("btn-load-files").addEventListener("click", loadFromDiskFiles);
+
+    (function bootNav() {
+      const ex = document.getElementById("extra-nav");
+      if (!isFileProtocol() && window.location.port && window.location.port !== "8765") {
+        ex.innerHTML = '<a href="/">Game</a> · <a href="/pool-review.html">Table editor</a>';
+      }
+    })();
+    document.getElementById("btn-download").addEventListener("click", downloadJson);
+    document.getElementById("btn-prev").addEventListener("click", () => go(-1));
+    document.getElementById("btn-next").addEventListener("click", () => go(1));
+    document.getElementById("only-unreviewed").addEventListener("change", () => {
+      flushCurrentToEntry();
+      computeOrder();
+      show();
+    });
+    document.getElementById("shuffle").addEventListener("change", () => {
+      flushCurrentToEntry();
+      computeOrder();
+      show();
+    });
+
+    document.addEventListener("keydown", (ev) => {
+      const t = ev.target;
+      const tag = t && t.tagName;
+      const inField = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+      if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+        if (inField) return;
+        ev.preventDefault();
+        go(ev.key === "ArrowLeft" ? -1 : 1);
+        return;
+      }
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (ev.key === "r" || ev.key === "R") {
+        document.getElementById("reviewed").checked = !document.getElementById("reviewed").checked;
+        flushCurrentToEntry();
+        show();
+      }
+      if (ev.key === "s" || ev.key === "S") downloadJson();
+    });
+
+    loadPool();
+  </script>
+</body>
+</html>

@@ -41,16 +41,37 @@
       text-align: center;
       padding: 4px 0 8px;
     }
-    .brand-compact h1 {
+    .brand-compact .brand-poster-cn-row {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(0, 1vw, 0.08em);
+      margin: 0;
+      font-size: inherit;
+    }
+    .brand-compact .brand-poster-char {
       font-family: "Noto Sans SC", sans-serif;
       font-weight: 900;
-      font-size: 1.28rem;
-      letter-spacing: 0.06em;
+      font-size: clamp(1.35rem, 7vw, 1.75rem);
+      line-height: 1;
       color: #05147a;
-      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.95);
+      transform: rotate(var(--tilt, 0deg));
+      letter-spacing: 0;
+      -webkit-text-stroke: clamp(1px, 0.35vw, 2px) #fff;
       paint-order: stroke fill;
-      text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.45);
+      text-shadow:
+        2px 3px 0 rgba(255, 255, 255, 0.55),
+        4px 5px 0 rgba(5, 20, 100, 0.18),
+        0 6px 12px rgba(0, 0, 0, 0.12);
+      filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.3));
     }
+    .brand-compact .brand-poster-char:nth-child(1) { --tilt: -2.5deg; }
+    .brand-compact .brand-poster-char:nth-child(2) { --tilt: 1.5deg; }
+    .brand-compact .brand-poster-char:nth-child(3) { --tilt: -1deg; }
     .wrap.show-brand .brand-compact { display: block; }
 
     /* Splash — 猜老外 only, soda-poster typography (Wanta/Fanta vibe, no Latin) */
@@ -264,12 +285,6 @@
       color: #5a0606;
       box-shadow: 0 6px 0 #5a0606;
     }
-    .footer-note {
-      text-align: center;
-      font-size: 0.65rem;
-      opacity: 0.85;
-      margin-top: 12px;
-    }
     /* CJK: fewer lone characters stranded on the last line */
     .prose-cjk {
       text-wrap: pretty;
@@ -464,16 +479,15 @@
       min-height: 1.2em;
     }
     .hidden { display: none !important; }
-    .disclaimer-muted {
+    .splash-pool-hint {
       font-size: 0.78rem;
       opacity: 0.88;
-      margin-top: 10px;
-      line-height: 1.45;
-    }
-    .disclaimer-muted a {
-      color: inherit;
-      text-decoration: underline;
-      text-underline-offset: 2px;
+      margin-top: 12px;
+      text-align: center;
+      line-height: 1.35;
+      max-width: 18rem;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
@@ -481,7 +495,9 @@
   <button type="button" class="bgm-fab hidden" id="btn-bgm" aria-label="背景音乐">🎵</button>
   <div class="wrap" id="app-wrap">
     <header class="brand-compact" aria-hidden="true">
-      <h1>猜老外</h1>
+      <h1 class="brand-poster-cn-row">
+        <span class="brand-poster-char">猜</span><span class="brand-poster-char">老</span><span class="brand-poster-char">外</span>
+      </h1>
     </header>
 
     <section id="screen-intro" class="screen active">
@@ -502,6 +518,7 @@
         </figure>
         <p id="intro-challenge" class="splash-friend hidden prose-cjk"></p>
         <button type="button" class="splash-btn" id="btn-start">开始</button>
+        <p class="splash-pool-hint prose-cjk" id="splash-pool-hint" aria-live="polite"></p>
       </div>
     </section>
 
@@ -517,13 +534,6 @@
         </div>
         <div class="choices" id="choices"></div>
       </div>
-      <p class="footer-note prose-cjk">点选答案后自动下一题</p>
-      <p class="footer-note prose-cjk disclaimer-muted" id="play-disclaimer">
-        图片来源 randomuser.me：官方说明<strong>头像与国籍字段无关</strong>，题目仅为娱乐。
-        需要按相貌标注国别请用
-        <a class="pool-review-link" href="#">题库校对</a>
-        导出 JSON 后替换服务器上的 <code style="font-size:0.85em">data/faces-pool.json</code>。
-      </p>
     </section>
 
     <section id="screen-result" class="screen">
@@ -604,7 +614,11 @@
     let POOL = FALLBACK_POOL.slice();
     let faceManifest = null;
     let poolBuilt = false;
-    const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v6";
+    /** Bumped when pool loading / cache shape changes (e.g. self-hosted 345+ rollout). */
+    const POOL_CLIENT_BUILD = "7";
+    const POOL_JSON_CACHE_KEY = "cailaowai_faces_pool_v" + POOL_CLIENT_BUILD;
+    /** `faces-pool.json` top-level version; refetch when the importer bumps it. */
+    let poolSourceVersion = null;
     /** Only if hosted JSON + cache both fail (e.g. first open in strict WebView). */
     const QUICK_BUILD_TARGET = 120;
     const QUICK_BUILD_BUDGET_MS = 8000;
@@ -735,6 +749,14 @@
       return true;
     }
 
+    function updateSplashPoolHint() {
+      const el = document.getElementById("splash-pool-hint");
+      if (!el) return;
+      if (poolBuilt && POOL.length >= MIN_POOL_ENTRIES) {
+        el.textContent = `自托管题库 ${POOL.length} 条 · 客户端 v${POOL_CLIENT_BUILD}`;
+      }
+    }
+
     async function buildHugeHumanPoolQuick() {
       const seen = new Set();
       const out = [];
@@ -791,22 +813,33 @@
     }
 
     async function ensurePool() {
-      if (poolBuilt && POOL.length >= MIN_POOL_ENTRIES) return;
       await ensureCountryLabels();
 
       const poolUrl = `${gameOriginBase()}/data/faces-pool.json`;
       try {
-        const r = await fetchWithTimeout(poolUrl, 10000);
+        const r = await fetchWithTimeout(poolUrl, 10000, { cache: "no-store" });
         if (r.ok) {
           const data = await r.json();
+          const ver = Number(data.version) || 0;
           const entries = normalizePoolEntries(data);
+          if (
+            poolBuilt &&
+            poolSourceVersion === ver &&
+            POOL.length >= MIN_POOL_ENTRIES
+          ) {
+            updateSplashPoolHint();
+            return;
+          }
           if (applyPoolEntries(entries, "faces-pool.json")) {
+            poolSourceVersion = ver;
             try {
               localStorage.setItem(
                 POOL_JSON_CACHE_KEY,
-                JSON.stringify({ v: data.version || 0, entries: POOL })
+                JSON.stringify({ v: ver, entries: POOL })
               );
+              localStorage.removeItem("cailaowai_faces_pool_v6");
             } catch (e) {}
+            updateSplashPoolHint();
             return;
           }
           try {
@@ -816,6 +849,7 @@
             localStorage.removeItem("cailaowai_faces_pool_v3");
             localStorage.removeItem("cailaowai_faces_pool_v4");
             localStorage.removeItem("cailaowai_faces_pool_v5");
+            localStorage.removeItem("cailaowai_faces_pool_v6");
           } catch (e) {}
         }
       } catch (e) {}
@@ -826,6 +860,8 @@
           const c = JSON.parse(raw);
           const fromCache = normalizePoolEntries({ entries: c.entries });
           if (c.entries && applyPoolEntries(fromCache, "cache")) {
+            poolSourceVersion = Number(c.v) || 0;
+            updateSplashPoolHint();
             return;
           }
           try {
@@ -837,12 +873,16 @@
       const built = await buildHugeHumanPoolQuick();
       if (built.length >= MIN_POOL_ENTRIES && !poolDistributionBroken(built)) {
         applyPoolEntries(built, "randomuser.me (live)");
+        poolSourceVersion = null;
+        updateSplashPoolHint();
         return;
       }
 
       POOL = FALLBACK_POOL.slice();
       poolBuilt = true;
+      poolSourceVersion = null;
       faceManifest = null;
+      updateSplashPoolHint();
     }
 
     /** ISO 3166-1 alpha-2 → flag emoji (regional indicators). */
@@ -1178,14 +1218,18 @@
       }
     }
 
-    function formatPlayerCount(n) {
-      return Math.max(0, Math.floor(Number(n) || 0)).toLocaleString("zh-CN");
+    const GLOBAL_STATS_MIN_PLAYS = 10;
+    const ASSUMED_POP_MEAN_PCT = 35;
+
+    function userPctThisRoundMain(finalScore) {
+      return Math.round((100 * finalScore) / ROUNDS_PER_GAME);
     }
 
     async function submitGlobalStats(finalScore) {
       const wrapEl = document.getElementById("global-compare");
       if (!wrapEl) return;
       const base = gameOriginBase();
+      const userPct = userPctThisRoundMain(finalScore);
       wrapEl.classList.remove("hidden");
       wrapEl.textContent = "";
       const loading = document.createElement("p");
@@ -1200,30 +1244,35 @@
       } catch (e) {
         /* summary may still work on older deploys */
       }
-      let data;
+      let data = null;
       try {
         const r = await fetchWithTimeout(base + "/api/stats/summary", 8000);
-        if (!r.ok) throw new Error("summary");
-        data = await r.json();
-      } catch (e) {
-        wrapEl.textContent = "";
-        const p = document.createElement("p");
-        p.textContent = "全站排行暂时拉不到，本地照样能玩。";
-        wrapEl.appendChild(p);
+        if (r.ok) data = await r.json();
+      } catch (e) {}
+
+      wrapEl.textContent = "";
+      const useAssumedMean =
+        !data ||
+        Math.max(0, parseInt(data.total_plays, 10) || 0) < GLOBAL_STATS_MIN_PLAYS;
+
+      if (useAssumedMean) {
+        const pVs = document.createElement("p");
+        if (userPct > ASSUMED_POP_MEAN_PCT) {
+          pVs.textContent = `你这局 ${userPct}% 正确率，高于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+        } else if (userPct < ASSUMED_POP_MEAN_PCT) {
+          pVs.textContent = `你这局 ${userPct}% 正确率，低于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+        } else {
+          pVs.textContent = `你这局 ${userPct}% 正确率，接近该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+        }
+        wrapEl.appendChild(pVs);
         return;
       }
+
       const total = Math.max(0, parseInt(data.total_plays, 10) || 0);
       let bs = Array.isArray(data.by_score) ? data.by_score.map((x) => parseInt(x, 10) || 0) : [];
       while (bs.length < ROUNDS_PER_GAME + 1) bs.push(0);
       bs = bs.slice(0, ROUNDS_PER_GAME + 1);
 
-      let below = 0;
-      for (let i = 0; i < finalScore; i++) below += bs[i] || 0;
-      let above = 0;
-      for (let i = finalScore + 1; i < bs.length; i++) above += bs[i] || 0;
-
-      const pctBeat = total > 1 ? Math.round((100 * below) / total) : null;
-      const pctWorseThanYou = total > 1 ? Math.round((100 * above) / total) : null;
       const meanRaw =
         typeof data.mean_score === "number" && !Number.isNaN(data.mean_score)
           ? data.mean_score
@@ -1238,46 +1287,26 @@
         meanGuess != null && meanGuess >= 0
           ? Math.round((100 * meanGuess) / ROUNDS_PER_GAME)
           : null;
-      const med = typeof data.median_score === "number" ? data.median_score : null;
 
-      wrapEl.textContent = "";
-      const p1 = document.createElement("p");
-      if (total >= 3 && meanGuess != null && meanPct != null) {
-        p1.textContent =
-          "全站约 " +
-          formatPlayerCount(total) +
-          " 局 · 平均答对 " +
-          meanGuess.toFixed(1) +
-          " / " +
-          ROUNDS_PER_GAME +
-          " 题（约 " +
-          meanPct +
-          "% 正确率）。";
+      const pVs = document.createElement("p");
+      if (meanPct != null) {
+        if (userPct > meanPct) {
+          pVs.textContent = `你这局 ${userPct}% 正确率，高于全站平均（约 ${meanPct}%）。`;
+        } else if (userPct < meanPct) {
+          pVs.textContent = `你这局 ${userPct}% 正确率，低于全站平均（约 ${meanPct}%）。`;
+        } else {
+          pVs.textContent = `你这局 ${userPct}% 正确率，接近全站平均（约 ${meanPct}%）。`;
+        }
       } else {
-        p1.textContent = "全站累计约 " + formatPlayerCount(total) + " 局游戏。";
+        if (userPct > ASSUMED_POP_MEAN_PCT) {
+          pVs.textContent = `你这局 ${userPct}% 正确率，高于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+        } else if (userPct < ASSUMED_POP_MEAN_PCT) {
+          pVs.textContent = `你这局 ${userPct}% 正确率，低于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+        } else {
+          pVs.textContent = `你这局 ${userPct}% 正确率，接近该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+        }
       }
-      wrapEl.appendChild(p1);
-
-      if (total >= 5 && pctBeat != null && pctWorseThanYou != null) {
-        const p2 = document.createElement("p");
-        p2.textContent =
-          "按答对题数，你超过了全站约 " +
-          pctBeat +
-          "% 的玩家；约有 " +
-          pctWorseThanYou +
-          "% 的玩家比你答得更好。";
-        wrapEl.appendChild(p2);
-      } else if (total >= 4) {
-        const p2 = document.createElement("p");
-        p2.textContent = "多玩几局，全站对比会越来越准。";
-        wrapEl.appendChild(p2);
-      }
-
-      if (total >= 8 && med != null && finalScore > med) {
-        const p3 = document.createElement("p");
-        p3.textContent = "你这局也高于全站中位数（约 " + med.toFixed(1) + " 题）。";
-        wrapEl.appendChild(p3);
-      }
+      wrapEl.appendChild(pVs);
     }
 
     async function finish() {
@@ -1291,7 +1320,13 @@
       if (poolLine) {
         poolLine.replaceChildren();
         poolLine.appendChild(
-          document.createTextNode("本题库当前使用 " + POOL.length + " 条。头像与 API 国籍本就不一致（RandomUser 文档）；要按相貌出题请用 ")
+          document.createTextNode(
+            "本题库当前使用 " +
+              POOL.length +
+              " 条（自托管 · 客户端 v" +
+              POOL_CLIENT_BUILD +
+              "）。头像与 API 国籍本就不一致（RandomUser 文档）；要按相貌出题请用 "
+          )
         );
         const a = document.createElement("a");
         a.className = "pool-review-link";
@@ -1344,6 +1379,7 @@
     document.getElementById("btn-again").addEventListener("click", () => {
       btnStart.disabled = false;
       btnStart.textContent = btnStartDefaultLabel;
+      updateSplashPoolHint();
       show("intro");
     });
     document.getElementById("btn-share").addEventListener("click", shareScore);
@@ -1353,6 +1389,23 @@
       document.querySelectorAll("a.pool-review-link").forEach((a) => {
         a.href = `${base}/pool-review.html`;
       });
+    })();
+
+    (async function prefetchSplashPoolHint() {
+      try {
+        const r = await fetchWithTimeout(
+          `${gameOriginBase()}/data/faces-pool.json`,
+          8000,
+          { cache: "no-store" }
+        );
+        if (!r.ok) return;
+        const data = await r.json();
+        const n = Array.isArray(data.entries) ? data.entries.length : 0;
+        const el = document.getElementById("splash-pool-hint");
+        if (el && n > 0 && !poolBuilt) {
+          el.textContent = `自托管题库约 ${n} 条 · 客户端 v${POOL_CLIENT_BUILD}`;
+        }
+      } catch (e) {}
     })();
 
     (function applyQueryScore() {

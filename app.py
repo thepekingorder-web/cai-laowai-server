@@ -4,12 +4,16 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
+from collections import Counter
+from datetime import datetime, timezone
+from html import escape
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -18,7 +22,15 @@ GAME = ROOT / "cai-laowai"
 DATA = GAME / "data"
 ASSETS = GAME / "assets"
 
+_TOOLS = str(GAME / "tools")
+if _TOOLS not in sys.path:
+    sys.path.insert(0, _TOOLS)
+from countries_bundle import COUNTRIES  # noqa: E402
+
 app = FastAPI(title="cai-laowai")
+
+_MIN_PER_COUNTRY = 3
+_MIN_TOTAL = 500
 
 
 @app.get("/")
@@ -35,6 +47,114 @@ def pool_review_page():
     if not p.exists():
         raise HTTPException(status_code=404, detail="pool-review.html missing")
     return FileResponse(str(p), media_type="text/html; charset=utf-8")
+
+
+@app.get("/pool-qa.html")
+def pool_qa_page():
+    """One-by-one photo review: country + reviewed; download JSON for the repo."""
+    p = GAME / "pool-qa.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="pool-qa.html missing")
+    return FileResponse(str(p), media_type="text/html; charset=utf-8")
+
+
+def _pool_progress_payload() -> dict:
+    p = DATA / "faces-pool.json"
+    if not p.exists():
+        return {"error": "No faces-pool.json yet."}
+    raw = json.loads(p.read_text(encoding="utf-8"))
+    entries = list(raw.get("entries") or [])
+    codes_top100 = [c[0] for c in COUNTRIES]
+    top_set = set(codes_top100)
+    counts = Counter(e.get("code") or "?" for e in entries)
+    in_top100 = sum(1 for e in entries if e.get("code") in top_set)
+    countries_with_any = len([c for c in codes_top100 if counts.get(c, 0) > 0])
+    missing_min = [c for c in codes_top100 if counts.get(c, 0) < _MIN_PER_COUNTRY]
+    ok_total = len(entries) >= _MIN_TOTAL
+    ok_cov = len(missing_min) == 0
+    pct_total = min(100, int(round(100 * len(entries) / max(_MIN_TOTAL, 1))))
+    pct_cov = min(100, int(round(100 * (len(codes_top100) - len(missing_min)) / len(codes_top100))))
+    log_path = GAME / "tools" / "import_grow.log"
+    log_hint = ""
+    if log_path.exists():
+        m = log_path.stat().st_mtime
+        log_hint = datetime.fromtimestamp(m, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return {
+        "error": None,
+        "total": len(entries),
+        "in_top100": in_top100,
+        "countries_represented": countries_with_any,
+        "below_min_count": len(missing_min),
+        "missing_min": missing_min,
+        "counts": counts,
+        "min_total": _MIN_TOTAL,
+        "min_per": _MIN_PER_COUNTRY,
+        "top100_n": len(codes_top100),
+        "ok_total": ok_total,
+        "ok_cov": ok_cov,
+        "pct_total": pct_total,
+        "pct_cov": pct_cov,
+        "generated_at": raw.get("generated_at", ""),
+        "pool_policy": raw.get("pool_policy", ""),
+        "log_mtime": log_hint,
+    }
+
+
+@app.get("/pool-progress", response_class=HTMLResponse)
+def pool_progress_page():
+    """Human-readable face-pool stats; refreshes every 15s."""
+    d = _pool_progress_payload()
+    if d.get("error"):
+        body = f"<p>{escape(d['error'])}</p>"
+    else:
+        missing = d["missing_min"]
+        preview = ", ".join(
+            f"{c} ({d['counts'].get(c, 0)})" for c in missing[:30]
+        )
+        more = f" …and {len(missing) - 30} more." if len(missing) > 30 else ""
+        total_ok = "Yes — you have at least 500 photos." if d["ok_total"] else "Not yet — keep importing."
+        cov_ok = (
+            f"Yes — all {d['top100_n']} countries have at least {_MIN_PER_COUNTRY} photos."
+            if d["ok_cov"]
+            else f"Not yet — {d['below_min_count']} countries still need more photos."
+        )
+        body = f"""
+<p style="font-size:1.35rem;line-height:1.5"><strong>{d['total']}</strong> profile photos are in the pool right now.</p>
+<p>Your targets: <strong>{d['min_total']}</strong> photos total, and at least <strong>{d['min_per']}</strong> per country for each of the <strong>{d['top100_n']}</strong> countries we track.</p>
+<p><strong>Toward {d['min_total']} total:</strong> about <strong>{d['pct_total']}%</strong> — {total_ok}</p>
+<p><strong>Country coverage:</strong> <strong>{d['countries_represented']}</strong> countries have at least one photo. <strong>{d['top100_n'] - d['below_min_count']}</strong> countries already meet the “{d['min_per']}+ photos” rule ({d['pct_cov']}% of the list). {cov_ok}</p>
+<p><strong>All {d['total']} rows</strong> are tagged with one of those top-{d['top100_n']} country codes.</p>
+<p style="opacity:0.85">Pool file last built: <code>{escape(str(d.get('generated_at') or '?'))}</code><br/>
+Policy: <code>{escape(str(d.get('pool_policy') or '?'))}</code></p>
+"""
+        if missing:
+            body += f"<h3>Countries still under {d['min_per']} photos</h3><p>{escape(preview)}{escape(more)}</p>"
+        if d.get("log_mtime"):
+            body += f"<p style=\"opacity:0.85\">Import log last touched: <strong>{escape(d['log_mtime'])}</strong> (if an import is running, this time should keep moving).</p>"
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="refresh" content="15"/>
+  <title>Face pool progress</title>
+  <style>
+    body {{ font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; color: #111; }}
+    h1 {{ font-size: 1.5rem; }}
+    code {{ font-size: 0.9em; }}
+    a {{ color: #0b5; }}
+  </style>
+</head>
+<body>
+  <h1>Face pool progress</h1>
+  <p>This page reloads every <strong>15 seconds</strong> so you can leave it open while importing.</p>
+  {body}
+  <hr/>
+  <p><a href="/data/faces-pool.json">Raw pool JSON</a> · <a href="/pool-review.html">Pool review UI</a> · <a href="/">Game</a></p>
+</body>
+</html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/ui-test.html")
@@ -58,7 +178,11 @@ def faces_pool():
     p = DATA / "faces-pool.json"
     if not p.exists():
         raise HTTPException(status_code=404, detail="faces-pool.json missing")
-    return FileResponse(str(p), media_type="application/json; charset=utf-8")
+    return FileResponse(
+        str(p),
+        media_type="application/json; charset=utf-8",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.get("/data/countries.json")

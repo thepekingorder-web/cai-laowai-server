@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 .DS_Store
 cai-laowai/tools/.cache/
+
+# Import / one-off logs (do not ship to Railway)
+cai-laowai/tools/*.log
+cai-laowai/tools/nohup.out
+cai-laowai/tools/import_report.txt
