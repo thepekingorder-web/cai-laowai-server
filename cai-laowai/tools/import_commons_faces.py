@@ -295,7 +295,7 @@ def gather_pending_rows(
         lic = str(meta.get("LicenseShortName") or meta.get("License") or "See source")[:80]
         note = row_note if row_note is not None else _row_note_import
         row = {
-            "id": f"{code.lower()}-{slug[:16]}",
+            "id": f"{code.lower()}-{slug}",
             "file": rel,
             "code": code,
             "zh": zh,

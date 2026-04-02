@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Photo QA · Quick review</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1117; color: #e8eaef;
+      --accent: #f97316; --danger: #ef4444; --muted: #8b92a5;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; }
+    header {
+      padding: 12px 16px; border-bottom: 1px solid #2a3040;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+    }
+    header h1 { font-size: 1.05rem; margin: 0; font-weight: 700; }
+    header .links { font-size: 0.85rem; }
+    header .links a { color: #93c5fd; margin-right: 10px; }
+    main {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; padding: 14px; gap: 12px;
+    }
+    .photo-box {
+      width: 100%; max-width: 420px; height: min(56vh, 420px);
+      background: #050608; border-radius: 14px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .photo-box img {
+      max-width: 100%; max-height: 100%;
+      object-fit: contain; display: block;
+    }
+    .country {
+      text-align: center; font-size: 1.3rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .country .flag { font-size: 1.5rem; }
+    .country .code { color: var(--muted); font-size: 0.95rem; font-weight: 600; }
+    .actions {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      align-items: center; justify-content: center;
+    }
+    button {
+      font-size: 1.05rem; padding: 14px 28px; border-radius: 12px;
+      border: none; cursor: pointer; font-weight: 700;
+    }
+    .btn-remove { background: var(--danger); color: #fff; }
+    .btn-remove:active { background: #dc2626; }
+    .btn-keep { background: #22c55e; color: #111; }
+    .btn-keep:active { background: #16a34a; }
+    .pos { color: var(--muted); font-size: 0.9rem; text-align: center; }
+    .status { font-size: 0.85rem; text-align: center; min-height: 1.4em; }
+    .status.ok { color: #4ade80; }
+    .status.err { color: #f87171; }
+    .hint { color: var(--muted); font-size: 0.8rem; text-align: center; }
+    .done { text-align: center; padding: 3rem 1rem; }
+    .done h2 { font-size: 1.4rem; }
+    .removed-count {
+      background: #1e2433; color: var(--danger); font-weight: 700;
+      padding: 6px 14px; border-radius: 8px; font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Quick photo QA</h1>
+    <span class="links">
+      <a href="/">Game</a>
+      <a href="/skim.html">Browse</a>
+    </span>
+  </header>
+  <main id="main">
+    <p class="hint">Loading photos…</p>
+  </main>
+
+  <script>
+    function base() {
+      const p = window.location.pathname || "";
+      if (p.includes("/cai-laowai"))
+        return window.location.origin + p.split("/cai-laowai")[0] + "/cai-laowai";
+      return window.location.origin;
+    }
+
+    function assetUrl(row) {
+      if (!row.file) return "";
+      const f = String(row.file).trim().replace(/^\/?assets\//, "");
+      const segs = f.split("/").map(s => encodeURIComponent(s));
+      return `${base()}/assets/${segs.join("/")}`;
+    }
+
+    function flag(iso2) {
+      const s = String(iso2 || "").toUpperCase();
+      if (s.length !== 2 || /[^A-Z]/.test(s)) return "";
+      const b = 0x1f1e6;
+      return String.fromCodePoint(b + (s.charCodeAt(0) - 65), b + (s.charCodeAt(1) - 65));
+    }
+
+    let entries = [];
+    let index = 0;
+    let removedCount = 0;
+
+    function render() {
+      const m = document.getElementById("main");
+      if (!entries.length) {
+        m.innerHTML = `<div class="done"><h2>All done!</h2>
+          <p>You removed <strong>${removedCount}</strong> photos this session.</p>
+          <p>${removedCount > 0 ? "The pool has been updated." : "Nothing was changed."}</p>
+          <p><a href="/" style="color:#93c5fd">Play the game</a></p></div>`;
+        return;
+      }
+      index = Math.max(0, Math.min(index, entries.length - 1));
+      const row = entries[index];
+      const url = assetUrl(row);
+      const code = (row.code || "").toUpperCase();
+      const zh = row.zh || code;
+
+      m.innerHTML = `
+        <div class="photo-box"><img id="qa-img" alt="" /></div>
+        <div class="country">
+          <span class="flag">${flag(code)}</span>
+          <span id="qa-zh"></span>
+          <span class="code">${code}</span>
+        </div>
+        <div class="actions">
+          <button class="btn-remove" id="btn-remove">Remove</button>
+          <button class="btn-keep" id="btn-keep">Keep →</button>
+        </div>
+        <p class="pos">${index + 1} / ${entries.length} remaining</p>
+        <p class="status" id="status"></p>
+        <p class="removed-count" id="rm-count" ${removedCount ? "" : 'style="display:none"'}>${removedCount} removed this session</p>
+        <p class="hint">Keyboard: R = remove · K or → = keep/next · ← = go back</p>
+      `;
+
+      document.getElementById("qa-zh").textContent = zh;
+      document.getElementById("qa-img").src = url;
+
+      document.getElementById("btn-remove").onclick = () => removeEntry(row);
+      document.getElementById("btn-keep").onclick = () => { index++; render(); };
+    }
+
+    async function removeEntry(row) {
+      const status = document.getElementById("status");
+      const btn = document.getElementById("btn-remove");
+      btn.disabled = true;
+      btn.textContent = "Removing…";
+      status.textContent = "";
+      status.className = "status";
+
+      try {
+        const r = await fetch(`${base()}/api/pool/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entry_id: row.id }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || "Failed");
+
+        entries.splice(index, 1);
+        removedCount++;
+        if (index >= entries.length) index = entries.length - 1;
+        render();
+      } catch (e) {
+        status.textContent = "Error: " + e.message;
+        status.className = "status err";
+        btn.disabled = false;
+        btn.textContent = "Remove";
+      }
+    }
+
+    document.addEventListener("keydown", ev => {
+      if (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA") return;
+      if (!entries.length) return;
+      const key = ev.key.toLowerCase();
+      if (key === "r") {
+        ev.preventDefault();
+        const row = entries[Math.max(0, Math.min(index, entries.length - 1))];
+        removeEntry(row);
+      } else if (key === "k" || ev.key === "ArrowRight") {
+        ev.preventDefault();
+        index++;
+        render();
+      } else if (ev.key === "ArrowLeft") {
+        ev.preventDefault();
+        index--;
+        render();
+      }
+    });
+
+    async function load() {
+      try {
+        const r = await fetch(`${base()}/data/faces-pool.json`, { cache: "no-store" });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const data = await r.json();
+        entries = (data.entries || []).filter(e => e && e.file);
+        index = 0;
+        render();
+      } catch (e) {
+        document.getElementById("main").innerHTML =
+          '<p class="hint" style="color:#f87171">Could not load photos. Make sure the game site is running.</p>';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

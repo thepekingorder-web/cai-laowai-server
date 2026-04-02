@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!!!<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -81,23 +81,18 @@
   <h1>Face pool · manual check</h1>
   <p class="sub" style="margin-top:-4px;">
     <strong>Quick skim (read-only):</strong>
-    <a href="/pool-skim.html" id="link-skim">/pool-skim.html</a>
+    <a href="/skim.html" id="link-skim">Open photo browser</a>
     — flip through every photo + country, no editing.
   </p>
 
   <div class="card" style="border:2px solid var(--accent);margin-bottom:16px;">
-    <strong style="font-size:1.05rem;">Start here (no broken links)</strong>
+    <strong style="font-size:1.05rem;">If links show errors or photos are missing</strong>
     <p class="sub" style="margin:8px 0 0;">
-      <strong>Option A — easiest:</strong> In Finder, open the <code>cai-laowai</code> folder in this project and
-      <strong>double-click</strong> <code>Open Pool QA.command</code>. A terminal window opens and Safari/Chrome loads this page automatically; photos load from <code>assets/</code>.
+      You must open these pages through a <strong>running site</strong>, not as files on your disk.
+      Double‑click <code>Open Pool QA.command</code> in this folder (it opens the browser for you), <em>or</em> run the main game from the project and use the same web address for QA and the photo browser.
     </p>
     <p class="sub" style="margin:8px 0 0;">
-      <strong>Option B — from Cursor:</strong> Right‑click <code>cai-laowai/Open Pool QA.command</code> → Open (or run <code>bash "cai-laowai/Open Pool QA.command"</code> from the repo root).
-    </p>
-    <p class="sub" style="margin:8px 0 0;">
-      <strong>Option C — you already use uvicorn:</strong> start the game server, then open
-      <a href="http://127.0.0.1:8000/pool-qa.html" id="link-localhost">http://127.0.0.1:8000/pool-qa.html</a>
-      (change port if needed).
+      <a href="http://127.0.0.1:8000/pool-qa.html" id="link-localhost">Try this page on the main game address</a> (only works while that site is running).
     </p>
   </div>
 
@@ -412,13 +407,15 @@
     (function bootNav() {
       const ex = document.getElementById("extra-nav");
       const skim = document.getElementById("link-skim");
+      const local = document.getElementById("link-localhost");
       if (!isFileProtocol()) {
         const root = base();
-        if (skim) skim.href = root + "/pool-skim.html";
+        if (local) local.href = root + "/pool-qa.html";
+        if (skim) skim.href = root + "/skim.html";
         ex.innerHTML =
           '<a href="' +
           root +
-          '/pool-skim.html">Skim photos</a> · <a href="' +
+          '/skim.html">Skim photos</a> · <a href="' +
           root +
           '/">Game</a> · <a href="' +
           root +

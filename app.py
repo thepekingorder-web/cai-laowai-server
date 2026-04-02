@@ -36,6 +36,27 @@ _MIN_PER_COUNTRY = 3
 _MIN_TOTAL = 500
 
 
+def _register_all_cai_laowai_html() -> None:
+    """Serve every file cai-laowai/*.html at /that-name.html (except index → only /)."""
+    for html_path in sorted(GAME.glob("*.html")):
+        if html_path.name == "index.html":
+            continue
+        if not html_path.is_file():
+            continue
+        fp = html_path.resolve()
+
+        def register_one(file_path: Path) -> None:
+            name = file_path.name
+
+            def serve_game_html() -> FileResponse:
+                return FileResponse(str(file_path), media_type="text/html; charset=utf-8")
+
+            serve_game_html.__name__ = f"serve_{name.replace('.', '_').replace('-', '_')}"
+            app.add_api_route("/" + name, serve_game_html, methods=["GET"])
+
+        register_one(fp)
+
+
 @app.get("/")
 def root_page():
     p = GAME / "index.html"
@@ -44,30 +65,7 @@ def root_page():
     return FileResponse(str(p), media_type="text/html; charset=utf-8")
 
 
-@app.get("/pool-review.html")
-def pool_review_page():
-    p = GAME / "pool-review.html"
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="pool-review.html missing")
-    return FileResponse(str(p), media_type="text/html; charset=utf-8")
-
-
-@app.get("/pool-qa.html")
-def pool_qa_page():
-    """One-by-one photo review: country + reviewed; download JSON for the repo."""
-    p = GAME / "pool-qa.html"
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="pool-qa.html missing")
-    return FileResponse(str(p), media_type="text/html; charset=utf-8")
-
-
-@app.get("/pool-skim.html")
-def pool_skim_page():
-    """Read-only skim: every pool photo + country (fast QA pass)."""
-    p = GAME / "pool-skim.html"
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="pool-skim.html missing")
-    return FileResponse(str(p), media_type="text/html; charset=utf-8")
+_register_all_cai_laowai_html()
 
 
 def _pool_progress_payload() -> dict:
@@ -163,18 +161,10 @@ Policy: <code>{escape(str(d.get('pool_policy') or '?'))}</code></p>
   <p>This page reloads every <strong>15 seconds</strong> so you can leave it open while importing.</p>
   {body}
   <hr/>
-  <p><a href="/data/faces-pool.json">Raw pool JSON</a> · <a href="/pool-skim.html">Skim all photos</a> · <a href="/pool-qa.html">Pool QA</a> · <a href="/pool-review.html">Pool review UI</a> · <a href="/">Game</a></p>
+  <p><a href="/data/faces-pool.json">Raw pool JSON</a> · <a href="/skim.html">Skim all photos</a> · <a href="/pool-qa.html">Pool QA</a> · <a href="/pool-review.html">Pool review UI</a> · <a href="/">Game</a></p>
 </body>
 </html>"""
     return HTMLResponse(html)
-
-
-@app.get("/ui-test.html")
-def ui_test_page():
-    p = GAME / "ui-test.html"
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="ui-test.html missing")
-    return FileResponse(str(p), media_type="text/html; charset=utf-8")
 
 
 @app.get("/data/faces-manifest.json")
@@ -195,6 +185,47 @@ def faces_pool():
         media_type="application/json; charset=utf-8",
         headers={"Cache-Control": "no-store"},
     )
+
+
+class PoolDeleteRequest(BaseModel):
+    entry_id: str
+
+
+@app.post("/api/pool/delete")
+def pool_delete_entry(body: PoolDeleteRequest):
+    """Remove one entry from faces-pool.json by ID and delete the image file."""
+    pool_path = DATA / "faces-pool.json"
+    if not pool_path.exists():
+        raise HTTPException(status_code=404, detail="faces-pool.json missing")
+
+    raw = json.loads(pool_path.read_text(encoding="utf-8"))
+    entries = list(raw.get("entries") or [])
+    match = [e for e in entries if e.get("id") == body.entry_id]
+    if not match:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    kept = [e for e in entries if e.get("id") != body.entry_id]
+    raw["entries"] = kept
+    raw["version"] = int(datetime.now(timezone.utc).timestamp())
+    raw["generated_at"] = datetime.now(timezone.utc).isoformat()
+
+    tmp = pool_path.with_suffix(".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(raw, f, ensure_ascii=False, separators=(",", ":"))
+        f.flush()
+    tmp.replace(pool_path)
+
+    for e in match:
+        rel = (e.get("file") or "").lstrip("/")
+        if rel:
+            img = (ASSETS / rel).resolve()
+            try:
+                if str(img).startswith(str(ASSETS.resolve())) and img.is_file():
+                    img.unlink()
+            except OSError:
+                pass
+
+    return {"ok": True, "remaining": len(kept), "deleted_id": body.entry_id}
 
 
 @app.get("/data/countries.json")
@@ -295,8 +326,11 @@ def _load_stats() -> dict:
 
 def _save_stats(data: dict) -> None:
     DATA.mkdir(parents=True, exist_ok=True)
-    with open(_STATS_PATH, "w", encoding="utf-8") as f:
+    tmp = _STATS_PATH.with_suffix(".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
+        f.flush()
+    tmp.replace(_STATS_PATH)
 
 
 def _histogram_median(by_score: list) -> Optional[float]:
