@@ -37,10 +37,8 @@ _MIN_TOTAL = 500
 
 
 def _register_all_cai_laowai_html() -> None:
-    """Serve every file cai-laowai/*.html at /that-name.html (except index → only /)."""
+    """Serve every file cai-laowai/*.html at /that-name.html."""
     for html_path in sorted(GAME.glob("*.html")):
-        if html_path.name == "index.html":
-            continue
         if not html_path.is_file():
             continue
         fp = html_path.resolve()
