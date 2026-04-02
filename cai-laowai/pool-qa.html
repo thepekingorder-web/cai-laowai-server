@@ -183,7 +183,8 @@
             return "";
           }
         }
-        return `${base()}/assets/${f}`;
+        const segs = f.split("/").map((s) => encodeURIComponent(s));
+        return `${base()}/assets/${segs.join("/")}`;
       }
       if (row.img && String(row.img).trim()) return String(row.img).trim();
       return "";

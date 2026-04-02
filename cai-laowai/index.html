@@ -641,7 +641,10 @@
     }
 
     function manifestAssetUrl(file) {
-      return `${gameOriginBase()}/assets/${file}`;
+      const rel = String(file || "").trim().replace(/^\/+/, "");
+      if (!rel) return "";
+      const segs = rel.split("/").map((s) => encodeURIComponent(s));
+      return `${gameOriginBase()}/assets/${segs.join("/")}`;
     }
 
     function resolveEntryImg(row) {

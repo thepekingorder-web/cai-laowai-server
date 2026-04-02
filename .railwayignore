@@ -1,2 +1,3 @@
-# Large local face crops; keep `railway up` uploads fast. Deploy assets via Git if needed.
-cai-laowai/assets/
+# Keep this file minimal: anything listed here is NOT uploaded on `railway up`.
+# Face images under cai-laowai/assets/faces/ MUST deploy with the app or photos 404.
+# (Large import logs etc. belong in .gitignore instead.)
