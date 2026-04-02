@@ -61,6 +61,15 @@ def pool_qa_page():
     return FileResponse(str(p), media_type="text/html; charset=utf-8")
 
 
+@app.get("/pool-skim.html")
+def pool_skim_page():
+    """Read-only skim: every pool photo + country (fast QA pass)."""
+    p = GAME / "pool-skim.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="pool-skim.html missing")
+    return FileResponse(str(p), media_type="text/html; charset=utf-8")
+
+
 def _pool_progress_payload() -> dict:
     p = DATA / "faces-pool.json"
     if not p.exists():
@@ -154,7 +163,7 @@ Policy: <code>{escape(str(d.get('pool_policy') or '?'))}</code></p>
   <p>This page reloads every <strong>15 seconds</strong> so you can leave it open while importing.</p>
   {body}
   <hr/>
-  <p><a href="/data/faces-pool.json">Raw pool JSON</a> · <a href="/pool-review.html">Pool review UI</a> · <a href="/">Game</a></p>
+  <p><a href="/data/faces-pool.json">Raw pool JSON</a> · <a href="/pool-skim.html">Skim all photos</a> · <a href="/pool-qa.html">Pool QA</a> · <a href="/pool-review.html">Pool review UI</a> · <a href="/">Game</a></p>
 </body>
 </html>"""
     return HTMLResponse(html)

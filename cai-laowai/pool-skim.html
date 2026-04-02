@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skim face pool · 浏览题库照片</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1117;
+      color: #e8eaef;
+      --accent: #f97316;
+      --muted: #8b92a5;
+    }
+    body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; }
+    header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #2a3040;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+    }
+    header h1 { font-size: 1.05rem; margin: 0; font-weight: 700; }
+    header .links { font-size: 0.88rem; }
+    header .links a { color: #93c5fd; margin-right: 12px; }
+    main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 16px; gap: 16px; }
+    .photo-box {
+      width: 100%; max-width: 560px; min-height: 280px;
+      background: #050608; border-radius: 14px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .photo-box img { max-width: 100%; max-height: min(62vh, 520px); object-fit: contain; display: block; }
+    .country-line {
+      text-align: center; font-size: 1.35rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+    }
+    .country-line .flag { font-size: 1.6rem; line-height: 1; }
+    .country-line .code { color: var(--muted); font-weight: 600; font-size: 1rem; }
+    .meta { color: var(--muted); font-size: 0.8rem; text-align: center; max-width: 560px; word-break: break-all; }
+    .meta a { color: #93c5fd; }
+    .nav {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
+    }
+    button {
+      font-size: 1rem; padding: 12px 20px; border-radius: 10px; border: none;
+      cursor: pointer; font-weight: 600; background: #2d3548; color: #fff;
+    }
+    button.primary { background: var(--accent); color: #111; }
+    .pos { color: var(--muted); font-size: 0.95rem; min-width: 8em; text-align: center; }
+    .jump { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted); }
+    .jump input { width: 4.5em; padding: 8px; border-radius: 8px; border: 1px solid #3d4454; background: #1a1f2e; color: #fff; }
+    .err { color: #f87171; text-align: center; padding: 24px; }
+    .hint { color: var(--muted); font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>浏览题库 · Skim photos</h1>
+    <span class="links">
+      <a href="/">猜老外</a>
+      <a href="/pool-qa.html">校对 (QA)</a>
+      <a href="/pool-progress">进度</a>
+    </span>
+  </header>
+  <main id="main">
+    <p class="hint" id="loading">Loading pool…</p>
+  </main>
+
+  <script>
+    function isFileProtocol() {
+      return window.location.protocol === "file:";
+    }
+
+    function base() {
+      const p = window.location.pathname || "";
+      if (p.includes("/cai-laowai")) {
+        return window.location.origin + p.split("/cai-laowai")[0] + "/cai-laowai";
+      }
+      return window.location.origin;
+    }
+
+    function assetUrl(row) {
+      if (!row.file || !String(row.file).trim()) return "";
+      const f = String(row.file).trim().replace(/^\/?assets\//, "");
+      if (isFileProtocol()) {
+        const path = f.startsWith("faces/") ? "assets/" + f : "assets/" + f;
+        try {
+          return new URL(path, window.location.href).href;
+        } catch (e) {
+          return "";
+        }
+      }
+      const segs = f.split("/").map((s) => encodeURIComponent(s));
+      return `${base()}/assets/${segs.join("/")}`;
+    }
+
+    function flagEmoji(iso2) {
+      const s = String(iso2 || "").toUpperCase();
+      if (s.length !== 2 || /[^A-Z]/.test(s)) return "🌐";
+      const b = 0x1f1e6;
+      return String.fromCodePoint(b + (s.charCodeAt(0) - 65), b + (s.charCodeAt(1) - 65));
+    }
+
+    let entries = [];
+    let index = 0;
+
+    function show() {
+      const main = document.getElementById("main");
+      if (!entries.length) {
+        main.innerHTML = '<p class="err">No photos in pool (or failed to load).</p>';
+        return;
+      }
+      index = Math.max(0, Math.min(index, entries.length - 1));
+      const row = entries[index];
+      const url = assetUrl(row);
+      const code = String(row.code || "").toUpperCase();
+      const zh = row.zh || code;
+      const su = row.source_url ? String(row.source_url) : "";
+      const qa = base() + "/pool-qa.html";
+
+      main.innerHTML = `
+        <div class="photo-box">
+          <img id="skim-img" alt="" referrerpolicy="no-referrer" />
+        </div>
+        <div class="country-line">
+          <span class="flag" aria-hidden="true">${flagEmoji(code)}</span>
+          <span id="skim-zh"></span>
+          <span class="code" id="skim-code"></span>
+        </div>
+        <p class="meta" id="skim-meta"></p>
+        <div class="nav">
+          <button type="button" id="btn-prev">← Previous</button>
+          <span class="pos" id="skim-pos"></span>
+          <button type="button" id="btn-next" class="primary">Next →</button>
+        </div>
+        <div class="jump">
+          <label>Go to # <input type="number" id="jump-n" min="1" max="${entries.length}" value="${index + 1}" /></label>
+          <button type="button" id="btn-go">Go</button>
+        </div>
+        <p class="hint">Keyboard: ← → to move · read-only (edit in <a id="skim-qa-link" href="#">Pool QA</a>)</p>
+      `;
+
+      document.getElementById("skim-zh").textContent = zh;
+      document.getElementById("skim-code").textContent = code;
+      document.getElementById("skim-pos").textContent = `${index + 1} / ${entries.length}`;
+      document.getElementById("skim-qa-link").href = qa;
+
+      const img = document.getElementById("skim-img");
+      const meta = document.getElementById("skim-meta");
+      img.src = url;
+      img.onerror = () => {
+        meta.textContent =
+          "Image failed to load. Use the same host as the game (e.g. Railway or localhost) so /assets/… is reachable.";
+      };
+      meta.replaceChildren();
+      if (su) {
+        meta.appendChild(document.createTextNode("Source: "));
+        const a = document.createElement("a");
+        a.href = su;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = "Commons / link";
+        meta.appendChild(a);
+        meta.appendChild(document.createTextNode(" · id: " + (row.id || "")));
+      } else {
+        meta.textContent = "id: " + (row.id || "");
+      }
+
+      document.getElementById("btn-prev").onclick = () => { index--; show(); };
+      document.getElementById("btn-next").onclick = () => { index++; show(); };
+      document.getElementById("btn-go").onclick = () => {
+        const v = parseInt(document.getElementById("jump-n").value, 10);
+        if (!Number.isNaN(v) && v >= 1 && v <= entries.length) {
+          index = v - 1;
+          show();
+        }
+      };
+    }
+
+    async function load() {
+      const loading = document.getElementById("loading");
+      try {
+        const rp = await fetch(`${base()}/data/faces-pool.json`, { cache: "no-store" });
+        if (!rp.ok) throw new Error("faces-pool " + rp.status);
+        const data = await rp.json();
+        entries = (data.entries || []).filter((e) => e && assetUrl(e));
+        loading.remove();
+        if (!entries.length) {
+          document.getElementById("main").innerHTML =
+            '<p class="err">No entries with image paths. Start the app server or check faces-pool.json.</p>';
+          return;
+        }
+        index = 0;
+        show();
+      } catch (e) {
+        loading.remove();
+        document.getElementById("main").innerHTML =
+          '<p class="err">Could not load <code>faces-pool.json</code>. Open via your game server (e.g. <a href="http://127.0.0.1:8000/pool-skim.html">localhost</a>) or production URL.</p>';
+      }
+    }
+
+    document.addEventListener("keydown", (ev) => {
+      if (ev.target && (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA")) return;
+      if (ev.key === "ArrowLeft") {
+        ev.preventDefault();
+        index--;
+        if (entries.length) show();
+      }
+      if (ev.key === "ArrowRight") {
+        ev.preventDefault();
+        index++;
+        if (entries.length) show();
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>
