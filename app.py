@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import mimetypes
 import sys
 import threading
 from collections import Counter
@@ -14,7 +16,6 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parent
@@ -26,6 +27,8 @@ _TOOLS = str(GAME / "tools")
 if _TOOLS not in sys.path:
     sys.path.insert(0, _TOOLS)
 from countries_bundle import COUNTRIES  # noqa: E402
+
+logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(title="cai-laowai")
 
@@ -193,6 +196,67 @@ def countries_json():
     return FileResponse(str(p), media_type="application/json; charset=utf-8")
 
 
+def _safe_asset_file(resource_path: str) -> Optional[Path]:
+    """Resolve a path under cai-laowai/assets; return file path or None."""
+    if not resource_path or "\x00" in resource_path:
+        return None
+    rel = Path(resource_path)
+    if rel.is_absolute() or any(p == ".." for p in rel.parts):
+        return None
+    try:
+        base = ASSETS.resolve()
+    except OSError:
+        return None
+    candidate = (base / rel).resolve()
+    try:
+        candidate.relative_to(base)
+    except ValueError:
+        return None
+    return candidate if candidate.is_file() else None
+
+
+@app.get("/assets/{resource_path:path}")
+def serve_asset(resource_path: str):
+    """Serve self-hosted face images (explicit route — more reliable than StaticFiles on some hosts)."""
+    target = _safe_asset_file(resource_path)
+    if target is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+    mime, _ = mimetypes.guess_type(str(target))
+    return FileResponse(
+        str(target),
+        media_type=mime or "application/octet-stream",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@app.get("/api/health/assets")
+def health_assets():
+    """Deploy check: face files must exist on disk or the game shows broken images."""
+    faces = ASSETS / "faces"
+    n = 0
+    if faces.is_dir():
+        n = sum(1 for p in faces.iterdir() if p.is_file())
+    return {
+        "ok": n > 0,
+        "assets_dir": str(ASSETS),
+        "assets_exists": ASSETS.is_dir(),
+        "face_files": n,
+        "game_dir": str(GAME),
+    }
+
+
+@app.on_event("startup")
+def _log_assets_on_startup() -> None:
+    faces = ASSETS / "faces"
+    n = sum(1 for p in faces.glob("*") if p.is_file()) if faces.is_dir() else 0
+    logger.warning(
+        "cai-laowai assets: ASSETS=%s exists=%s files_in_faces/=%s",
+        ASSETS,
+        ASSETS.is_dir(),
+        n,
+    )
+
+
 _stats_lock = threading.Lock()
 _STATS_PATH = DATA / "game-stats.json"
 # One bucket per raw score (12 rounds → scores 0…12 inclusive).
@@ -288,5 +352,3 @@ def stats_summary():
     }
 
 
-if ASSETS.is_dir():
-    app.mount("/assets", StaticFiles(directory=str(ASSETS)), name="assets")

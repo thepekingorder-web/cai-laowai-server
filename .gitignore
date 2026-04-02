@@ -8,3 +8,5 @@ cai-laowai/tools/.cache/
 cai-laowai/tools/*.log
 cai-laowai/tools/nohup.out
 cai-laowai/tools/import_report.txt
+cai-laowai/tools/import_nohup.out
+cai-laowai/tools/import_watchdog.sh
