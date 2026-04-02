@@ -228,6 +228,47 @@ def pool_delete_entry(body: PoolDeleteRequest):
     return {"ok": True, "remaining": len(kept), "deleted_id": body.entry_id}
 
 
+class StagingDeleteRequest(BaseModel):
+    entry_id: str
+
+
+@app.post("/api/pool-staging/delete")
+def staging_delete_entry(body: StagingDeleteRequest):
+    """Remove one entry from faces-pool-staging.json by ID and delete the image file."""
+    pool_path = DATA / "faces-pool-staging.json"
+    if not pool_path.exists():
+        raise HTTPException(status_code=404, detail="faces-pool-staging.json missing")
+
+    raw = json.loads(pool_path.read_text(encoding="utf-8"))
+    entries = list(raw.get("entries") or [])
+    match = [e for e in entries if e.get("id") == body.entry_id]
+    if not match:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    kept = [e for e in entries if e.get("id") != body.entry_id]
+    raw["entries"] = kept
+    raw["version"] = int(datetime.now(timezone.utc).timestamp())
+    raw["generated_at"] = datetime.now(timezone.utc).isoformat()
+
+    tmp = pool_path.with_suffix(".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(raw, f, ensure_ascii=False, separators=(",", ":"))
+        f.flush()
+    tmp.replace(pool_path)
+
+    for e in match:
+        rel = (e.get("file") or "").lstrip("/")
+        if rel:
+            img = (ASSETS / rel).resolve()
+            try:
+                if str(img).startswith(str(ASSETS.resolve())) and img.is_file():
+                    img.unlink()
+            except OSError:
+                pass
+
+    return {"ok": True, "remaining": len(kept), "deleted_id": body.entry_id}
+
+
 @app.get("/data/faces-pool-staging.json")
 def faces_pool_staging():
     p = DATA / "faces-pool-staging.json"

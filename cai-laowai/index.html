@@ -371,19 +371,67 @@
     .result-details {
       width: 100%;
       margin-top: 14px;
-      text-align: center;
+      text-align: left;
       font-size: 0.88rem;
       font-weight: 700;
       line-height: 1.55;
       color: #05147a;
       background: rgba(255, 255, 255, 0.88);
       border-radius: 14px;
-      padding: 12px 14px;
+      padding: 16px 18px;
       box-shadow: 0 4px 18px rgba(10, 31, 143, 0.12);
     }
-    .result-details p { margin: 0; }
-    .result-details p + p { margin-top: 10px; }
-    .result-details .result-loading { opacity: 0.75; }
+    .result-details .result-loading {
+      opacity: 0.75;
+      text-align: center;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .bar-label {
+      min-width: 2.8em;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #05147a;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .bar-track {
+      flex: 1;
+      height: 22px;
+      background: rgba(10, 31, 143, 0.08);
+      border-radius: 11px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 11px;
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .bar-fill.bar-you {
+      background: linear-gradient(90deg, #ff7a1a, #ff9a44);
+    }
+    .bar-fill.bar-avg {
+      background: linear-gradient(90deg, #7c8db5, #a0aec0);
+    }
+    .bar-pct {
+      min-width: 3em;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #05147a;
+      flex-shrink: 0;
+    }
+    .bar-verdict {
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #05147a;
+      margin-top: 2px;
+    }
     .bgm-fab {
       position: fixed;
       bottom: max(18px, env(safe-area-inset-bottom));
@@ -1251,28 +1299,36 @@
       return Math.round((100 * finalScore) / played);
     }
 
-    function appendVsBaselineParagraph(el, userPct) {
-      const p = document.createElement("p");
-      if (userPct > ASSUMED_POP_MEAN_PCT) {
-        p.textContent = `你这局 ${userPct}% 正确率，高于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
-      } else if (userPct < ASSUMED_POP_MEAN_PCT) {
-        p.textContent = `你这局 ${userPct}% 正确率，低于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
-      } else {
-        p.textContent = `你这局 ${userPct}% 正确率，接近该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
-      }
-      el.appendChild(p);
-    }
+    function buildComparisonBars(el, userPct, avgPct, avgLabel) {
+      const diff = userPct - avgPct;
+      let verdict;
+      if (diff > 15) verdict = "远超平均水平！";
+      else if (diff > 0) verdict = "高于平均水平";
+      else if (diff === 0) verdict = "与平均水平持平";
+      else if (diff > -15) verdict = "略低于平均水平";
+      else verdict = "低于平均水平";
 
-    function appendVsSiteMeanParagraph(el, userPct, meanPct) {
-      const p = document.createElement("p");
-      if (userPct > meanPct) {
-        p.textContent = `你这局 ${userPct}% 正确率，高于全站平均（约 ${meanPct}%）。`;
-      } else if (userPct < meanPct) {
-        p.textContent = `你这局 ${userPct}% 正确率，低于全站平均（约 ${meanPct}%）。`;
-      } else {
-        p.textContent = `你这局 ${userPct}% 正确率，接近全站平均（约 ${meanPct}%）。`;
-      }
-      el.appendChild(p);
+      el.innerHTML = `
+        <div class="bar-row">
+          <span class="bar-label">你</span>
+          <div class="bar-track"><div class="bar-fill bar-you" style="width:0%"></div></div>
+          <span class="bar-pct">${userPct}%</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">${avgLabel}</span>
+          <div class="bar-track"><div class="bar-fill bar-avg" style="width:0%"></div></div>
+          <span class="bar-pct">${avgPct}%</span>
+        </div>
+        <div class="bar-verdict">${diff >= 0 ? "+" : ""}${diff} · ${verdict}</div>
+      `;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const bars = el.querySelectorAll(".bar-fill");
+          bars[0].style.width = Math.max(2, userPct) + "%";
+          bars[1].style.width = Math.max(2, avgPct) + "%";
+        });
+      });
     }
 
     async function fillResultDetails(finalScore) {
@@ -1302,37 +1358,27 @@
       } catch (e) {}
 
       wrapEl.textContent = "";
-      const useAssumedMean =
-        !data ||
-        Math.max(0, parseInt(data.total_plays, 10) || 0) < GLOBAL_STATS_MIN_PLAYS;
 
-      if (useAssumedMean) {
-        appendVsBaselineParagraph(wrapEl, userPct);
-      } else {
-        const total = Math.max(0, parseInt(data.total_plays, 10) || 0);
-        let bs = Array.isArray(data.by_score) ? data.by_score.map((x) => parseInt(x, 10) || 0) : [];
-        while (bs.length < ROUNDS_PER_GAME + 1) bs.push(0);
-        bs = bs.slice(0, ROUNDS_PER_GAME + 1);
+      const hasRealData =
+        data &&
+        Math.max(0, parseInt(data.total_plays, 10) || 0) >= GLOBAL_STATS_MIN_PLAYS;
 
+      if (hasRealData) {
         let meanGuess =
           typeof data.mean_score === "number" && !Number.isNaN(data.mean_score)
             ? data.mean_score
             : null;
-        if (meanGuess == null && total > 0) {
+        if (meanGuess == null) {
+          const total = Math.max(1, parseInt(data.total_plays, 10) || 1);
+          let bs = Array.isArray(data.by_score) ? data.by_score.map((x) => parseInt(x, 10) || 0) : [];
           let acc = 0;
           for (let i = 0; i < bs.length; i++) acc += i * (bs[i] || 0);
           meanGuess = acc / total;
         }
-        const meanPct =
-          meanGuess != null && meanGuess >= 0
-            ? Math.round((100 * meanGuess) / ROUNDS_PER_GAME)
-            : null;
-
-        if (meanPct != null) {
-          appendVsSiteMeanParagraph(wrapEl, userPct, meanPct);
-        } else {
-          appendVsBaselineParagraph(wrapEl, userPct);
-        }
+        const meanPct = Math.round((100 * meanGuess) / ROUNDS_PER_GAME);
+        buildComparisonBars(wrapEl, userPct, meanPct, "均");
+      } else {
+        buildComparisonBars(wrapEl, userPct, ASSUMED_POP_MEAN_PCT, "均");
       }
     }
 
