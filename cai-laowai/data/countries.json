@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "countries": [
     {
       "code": "CN",
@@ -500,6 +500,41 @@
       "code": "MD",
       "zh": "摩尔多瓦",
       "en": "Moldova"
+    },
+    {
+      "code": "AT",
+      "zh": "奥地利",
+      "en": "Austria"
+    },
+    {
+      "code": "SE",
+      "zh": "瑞典",
+      "en": "Sweden"
+    },
+    {
+      "code": "IS",
+      "zh": "冰岛",
+      "en": "Iceland"
+    },
+    {
+      "code": "PT",
+      "zh": "葡萄牙",
+      "en": "Portugal"
+    },
+    {
+      "code": "GR",
+      "zh": "希腊",
+      "en": "Greece"
+    },
+    {
+      "code": "CA",
+      "zh": "加拿大",
+      "en": "Canada"
+    },
+    {
+      "code": "NZ",
+      "zh": "新西兰",
+      "en": "New Zealand"
     }
   ]
 }

@@ -1,3 +1,8 @@
-# Keep this file minimal: anything listed here is NOT uploaded on `railway up`.
-# Face images under cai-laowai/assets/faces/ MUST deploy with the app or photos 404.
-# (Large import logs etc. belong in .gitignore instead.)
+.git
+__pycache__
+*.pyc
+.venv
+cai-laowai/tools/.cache
+cai-laowai/tools/*.log
+cai-laowai/tools/import_nohup.out
+cai-laowai/tools/import_report.txt

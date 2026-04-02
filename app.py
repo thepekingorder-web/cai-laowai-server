@@ -228,6 +228,18 @@ def pool_delete_entry(body: PoolDeleteRequest):
     return {"ok": True, "remaining": len(kept), "deleted_id": body.entry_id}
 
 
+@app.get("/data/faces-pool-staging.json")
+def faces_pool_staging():
+    p = DATA / "faces-pool-staging.json"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="faces-pool-staging.json missing")
+    return FileResponse(
+        str(p),
+        media_type="application/json; charset=utf-8",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 @app.get("/data/countries.json")
 def countries_json():
     p = DATA / "countries.json"

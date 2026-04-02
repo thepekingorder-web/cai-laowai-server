@@ -301,9 +301,11 @@
     #screen-result.active {
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      justify-content: flex-start;
     }
     #screen-result .result-actions {
-      margin-top: auto;
+      margin-top: 14px;
+      flex-shrink: 0;
     }
 
     .result-hero {
@@ -312,112 +314,76 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding: 16px 0 8px;
+      padding: 8px 0 4px;
     }
-    .result-hero .score-num {
-      font-family: "Noto Sans SC", sans-serif;
-      font-size: clamp(3.25rem, 20vw, 4.25rem);
-      font-weight: 900;
-      color: #fff;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-      line-height: 1;
+    .result-brand-poster-row {
       display: flex;
-      align-items: baseline;
+      flex-direction: row;
+      flex-wrap: nowrap;
       justify-content: center;
-      gap: 0.06em;
+      align-items: center;
+      gap: clamp(0, 1.2vw, 0.1em);
+      margin: 0 0 14px;
+      font-size: inherit;
+      font-weight: inherit;
     }
-    .result-hero .score-denom {
+    .result-brand-poster-char {
+      font-family: "Noto Sans SC", sans-serif;
       font-weight: 900;
-      font-size: 0.42em;
-      opacity: 0.92;
+      font-size: clamp(1.65rem, 8.5vw, 2.15rem);
+      line-height: 1;
+      color: #05147a;
+      transform: rotate(var(--tilt, 0deg));
+      -webkit-text-stroke: clamp(1px, 0.4vw, 2.5px) #fff;
+      paint-order: stroke fill;
+      text-shadow:
+        2px 3px 0 rgba(255, 255, 255, 0.55),
+        4px 6px 0 rgba(5, 20, 100, 0.2),
+        0 8px 18px rgba(0, 0, 0, 0.14);
+      filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.35));
     }
-    .result-hero .score-sub {
-      font-weight: 700;
-      font-size: 1rem;
-      margin-top: 6px;
-      opacity: 0.94;
-    }
-    .result-hero .score-tag {
-      font-weight: 700;
-      font-size: 0.875rem;
-      margin-top: 8px;
-      opacity: 0.95;
-    }
-    .result-hero .pct-suffix {
-      font-size: 0.52em;
-      margin-left: 0.02em;
-    }
-    .result-hero .pool-size-line {
-      font-size: 0.8125rem;
-      font-weight: 600;
-      margin-top: 8px;
-      opacity: 0.88;
-    }
-    .session-analysis {
-      margin: 14px 0;
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.12);
-      font-size: 0.9rem;
-      line-height: 1.55;
-      text-align: left;
-    }
-    .session-analysis p { margin: 0.45em 0; }
-    .poster-sheet {
-      display: none;
-      max-width: 520px;
-      margin: 20px auto;
-      padding: 28px 24px;
-      background: #fff;
-      color: #0a1f8f;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      font-family: "Noto Sans SC", system-ui, sans-serif;
-    }
-    .poster-sheet h2 {
-      font-size: 1.75rem;
-      margin: 0 0 12px;
-      color: #e85a00;
-      text-align: center;
-    }
-    .poster-sheet .poster-big {
-      font-size: 3rem;
+    .result-brand-poster-char:nth-child(1) { --tilt: -2.5deg; }
+    .result-brand-poster-char:nth-child(2) { --tilt: 1.5deg; }
+    .result-brand-poster-char:nth-child(3) { --tilt: -1deg; }
+    .result-focus-line {
+      font-family: "Noto Sans SC", sans-serif;
       font-weight: 900;
-      text-align: center;
-      margin: 8px 0;
-    }
-    .poster-sheet .poster-lines {
-      margin-top: 18px;
-      font-size: 0.95rem;
-      line-height: 1.65;
-    }
-    @media print {
-      body * { visibility: hidden; }
-      .poster-sheet, .poster-sheet * { visibility: visible; }
-      .poster-sheet {
-        display: block !important;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        box-shadow: none;
-        border: none;
-      }
-    }
-    .stats-global {
-      margin: 12px 0;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.18);
-      font-size: 0.8125rem;
-      font-weight: 600;
-      line-height: 1.5;
-      text-align: center;
+      font-size: clamp(1.35rem, 5.5vw, 1.65rem);
+      line-height: 1.35;
       color: #fff;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.22);
+      max-width: 20em;
+      margin: 0 auto;
     }
-    .stats-global p + p {
-      margin-top: 6px;
+    .result-focus-line .result-pct-em {
+      font-size: clamp(2.1rem, 12vw, 3rem);
+      font-weight: 900;
+      display: inline;
     }
+    .result-fraction {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-top: 10px;
+      opacity: 0.92;
+      color: #fff;
+      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.15);
+    }
+    .result-details {
+      width: 100%;
+      margin-top: 14px;
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 700;
+      line-height: 1.55;
+      color: #05147a;
+      background: rgba(255, 255, 255, 0.88);
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 4px 18px rgba(10, 31, 143, 0.12);
+    }
+    .result-details p { margin: 0; }
+    .result-details p + p { margin-top: 10px; }
+    .result-details .result-loading { opacity: 0.75; }
     .bgm-fab {
       position: fixed;
       bottom: max(18px, env(safe-area-inset-bottom));
@@ -550,28 +516,20 @@
 
     <section id="screen-result" class="screen">
       <div class="result-hero">
-        <div class="score-num">
-          <span id="final-pct">0</span><span class="score-denom pct-suffix">%</span>
-        </div>
-        <p class="score-sub prose-cjk" id="final-fraction">答对 0 / 12 题</p>
-        <div class="score-tag">本局正确率 · 下方为全站对比</div>
-        <p class="pool-size-line" id="pool-size-line" aria-live="polite"></p>
+        <h2 class="result-brand-poster-row" aria-hidden="true">
+          <span class="result-brand-poster-char">猜</span><span class="result-brand-poster-char">老</span><span class="result-brand-poster-char">外</span>
+        </h2>
+        <p class="result-focus-line prose-cjk">
+          你本局答对了 <span class="result-pct-em" id="final-pct">0</span><span class="result-pct-em">%</span> 的题目
+        </p>
+        <p class="result-fraction prose-cjk" id="final-fraction">共 12 题 · 答对 0 题</p>
+        <div id="result-details" class="result-details prose-cjk" aria-live="polite"></div>
       </div>
-      <div id="session-analysis" class="session-analysis prose-cjk hidden" aria-live="polite"></div>
-      <div id="global-compare" class="stats-global prose-cjk hidden" aria-live="polite"></div>
       <div class="result-actions no-print">
-        <button type="button" class="result-btn result-btn--secondary" id="btn-poster">打印 / 导出海报</button>
         <button type="button" class="result-btn result-btn--secondary" id="btn-share">分享成绩</button>
         <p class="share-hint prose-cjk" id="share-hint"></p>
         <button type="button" class="result-btn result-btn--primary" id="btn-again">再玩一局</button>
       </div>
-      <section id="poster-sheet" class="poster-sheet" aria-hidden="true">
-        <h2>猜老外 · 成绩单</h2>
-        <div class="poster-big"><span id="poster-pct">0</span>%</div>
-        <p style="text-align:center;margin:0;font-size:1rem;">答对 <span id="poster-frac">0 / 12</span> 题</p>
-        <div class="poster-lines prose-cjk" id="poster-lines"></div>
-        <p style="text-align:center;margin-top:20px;font-size:0.8rem;opacity:0.75;">cai-laowai</p>
-      </section>
     </section>
   </div>
 
@@ -1289,29 +1247,54 @@
     const GLOBAL_STATS_MIN_PLAYS = 10;
     const ASSUMED_POP_MEAN_PCT = 35;
 
-    function userPctThisRoundMain(finalScore) {
-      return Math.round((100 * finalScore) / ROUNDS_PER_GAME);
+    function userPctThisRound(finalScore, played) {
+      return Math.round((100 * finalScore) / played);
     }
 
-    async function submitGlobalStats(finalScore) {
-      const wrapEl = document.getElementById("global-compare");
+    function appendVsBaselineParagraph(el, userPct) {
+      const p = document.createElement("p");
+      if (userPct > ASSUMED_POP_MEAN_PCT) {
+        p.textContent = `你这局 ${userPct}% 正确率，高于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+      } else if (userPct < ASSUMED_POP_MEAN_PCT) {
+        p.textContent = `你这局 ${userPct}% 正确率，低于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+      } else {
+        p.textContent = `你这局 ${userPct}% 正确率，接近该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+      }
+      el.appendChild(p);
+    }
+
+    function appendVsSiteMeanParagraph(el, userPct, meanPct) {
+      const p = document.createElement("p");
+      if (userPct > meanPct) {
+        p.textContent = `你这局 ${userPct}% 正确率，高于全站平均（约 ${meanPct}%）。`;
+      } else if (userPct < meanPct) {
+        p.textContent = `你这局 ${userPct}% 正确率，低于全站平均（约 ${meanPct}%）。`;
+      } else {
+        p.textContent = `你这局 ${userPct}% 正确率，接近全站平均（约 ${meanPct}%）。`;
+      }
+      el.appendChild(p);
+    }
+
+    async function fillResultDetails(finalScore) {
+      const wrapEl = document.getElementById("result-details");
       if (!wrapEl) return;
-      const base = gameOriginBase();
-      const userPct = userPctThisRoundMain(finalScore);
-      wrapEl.classList.remove("hidden");
+      const played = Math.max(1, rounds.length || ROUNDS_PER_GAME);
+      const userPct = userPctThisRound(finalScore, played);
       wrapEl.textContent = "";
-      const loading = document.createElement("p");
-      loading.textContent = "正在同步全站数据…";
-      wrapEl.appendChild(loading);
+      const loadP = document.createElement("p");
+      loadP.className = "result-loading";
+      loadP.textContent = "正在对比全站数据…";
+      wrapEl.appendChild(loadP);
+
+      const base = gameOriginBase();
       try {
         await fetchWithTimeout(base + "/api/stats/record", 8000, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ score: finalScore }),
         });
-      } catch (e) {
-        /* summary may still work on older deploys */
-      }
+      } catch (e) {}
+
       let data = null;
       try {
         const r = await fetchWithTimeout(base + "/api/stats/summary", 8000);
@@ -1324,88 +1307,46 @@
         Math.max(0, parseInt(data.total_plays, 10) || 0) < GLOBAL_STATS_MIN_PLAYS;
 
       if (useAssumedMean) {
-        const pVs = document.createElement("p");
-        if (userPct > ASSUMED_POP_MEAN_PCT) {
-          pVs.textContent = `你这局 ${userPct}% 正确率，高于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
-        } else if (userPct < ASSUMED_POP_MEAN_PCT) {
-          pVs.textContent = `你这局 ${userPct}% 正确率，低于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
-        } else {
-          pVs.textContent = `你这局 ${userPct}% 正确率，接近该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
-        }
-        wrapEl.appendChild(pVs);
-        return;
-      }
-
-      const total = Math.max(0, parseInt(data.total_plays, 10) || 0);
-      let bs = Array.isArray(data.by_score) ? data.by_score.map((x) => parseInt(x, 10) || 0) : [];
-      while (bs.length < ROUNDS_PER_GAME + 1) bs.push(0);
-      bs = bs.slice(0, ROUNDS_PER_GAME + 1);
-
-      const meanRaw =
-        typeof data.mean_score === "number" && !Number.isNaN(data.mean_score)
-          ? data.mean_score
-          : null;
-      let meanGuess = meanRaw;
-      if (meanGuess == null && total > 0) {
-        let acc = 0;
-        for (let i = 0; i < bs.length; i++) acc += i * (bs[i] || 0);
-        meanGuess = acc / total;
-      }
-      const meanPct =
-        meanGuess != null && meanGuess >= 0
-          ? Math.round((100 * meanGuess) / ROUNDS_PER_GAME)
-          : null;
-
-      const pVs = document.createElement("p");
-      if (meanPct != null) {
-        if (userPct > meanPct) {
-          pVs.textContent = `你这局 ${userPct}% 正确率，高于全站平均（约 ${meanPct}%）。`;
-        } else if (userPct < meanPct) {
-          pVs.textContent = `你这局 ${userPct}% 正确率，低于全站平均（约 ${meanPct}%）。`;
-        } else {
-          pVs.textContent = `你这局 ${userPct}% 正确率，接近全站平均（约 ${meanPct}%）。`;
-        }
+        appendVsBaselineParagraph(wrapEl, userPct);
       } else {
-        if (userPct > ASSUMED_POP_MEAN_PCT) {
-          pVs.textContent = `你这局 ${userPct}% 正确率，高于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
-        } else if (userPct < ASSUMED_POP_MEAN_PCT) {
-          pVs.textContent = `你这局 ${userPct}% 正确率，低于该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+        const total = Math.max(0, parseInt(data.total_plays, 10) || 0);
+        let bs = Array.isArray(data.by_score) ? data.by_score.map((x) => parseInt(x, 10) || 0) : [];
+        while (bs.length < ROUNDS_PER_GAME + 1) bs.push(0);
+        bs = bs.slice(0, ROUNDS_PER_GAME + 1);
+
+        let meanGuess =
+          typeof data.mean_score === "number" && !Number.isNaN(data.mean_score)
+            ? data.mean_score
+            : null;
+        if (meanGuess == null && total > 0) {
+          let acc = 0;
+          for (let i = 0; i < bs.length; i++) acc += i * (bs[i] || 0);
+          meanGuess = acc / total;
+        }
+        const meanPct =
+          meanGuess != null && meanGuess >= 0
+            ? Math.round((100 * meanGuess) / ROUNDS_PER_GAME)
+            : null;
+
+        if (meanPct != null) {
+          appendVsSiteMeanParagraph(wrapEl, userPct, meanPct);
         } else {
-          pVs.textContent = `你这局 ${userPct}% 正确率，接近该参考基准（${ASSUMED_POP_MEAN_PCT}%）。`;
+          appendVsBaselineParagraph(wrapEl, userPct);
         }
       }
-      wrapEl.appendChild(pVs);
     }
 
     async function finish() {
       bumpPlayCount();
       const finalScore = score;
-      const pct = Math.round((100 * finalScore) / ROUNDS_PER_GAME);
+      const played = Math.max(1, rounds.length || ROUNDS_PER_GAME);
+      const pct = Math.round((100 * finalScore) / played);
       document.getElementById("final-pct").textContent = String(pct);
       document.getElementById("final-fraction").textContent =
-        `答对 ${finalScore} / ${ROUNDS_PER_GAME} 题`;
-      const poolLine = document.getElementById("pool-size-line");
-      if (poolLine) {
-        poolLine.replaceChildren();
-        poolLine.appendChild(
-          document.createTextNode(
-            "本题库当前使用 " +
-              POOL.length +
-              " 条（自托管 · 客户端 v" +
-              POOL_CLIENT_BUILD +
-              "）。头像与 API 国籍本就不一致（RandomUser 文档）；要按相貌出题请用 "
-          )
-        );
-        const a = document.createElement("a");
-        a.className = "pool-review-link";
-        a.href = `${gameOriginBase()}/pool-review.html`;
-        a.textContent = "题库校对";
-        poolLine.appendChild(a);
-        poolLine.appendChild(document.createTextNode("。"));
-      }
+        `共 ${played} 题 · 答对 ${finalScore} 题`;
       document.getElementById("share-hint").textContent = "";
       show("result");
-      await submitGlobalStats(finalScore);
+      await fillResultDetails(finalScore);
     }
 
     async function startGame() {
@@ -1451,13 +1392,6 @@
       show("intro");
     });
     document.getElementById("btn-share").addEventListener("click", shareScore);
-
-    (function wirePoolReviewLinks() {
-      const base = gameOriginBase();
-      document.querySelectorAll("a.pool-review-link").forEach((a) => {
-        a.href = `${base}/pool-review.html`;
-      });
-    })();
 
     (async function prefetchSplashPoolHint() {
       try {
