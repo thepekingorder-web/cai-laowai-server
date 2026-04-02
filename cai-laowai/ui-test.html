@@ -552,6 +552,11 @@
       code,
       zh: NAT_TO_ZH[code],
     }));
+    let CODE_POP_RANK = Object.create(null);
+    const POP_ORDER_FALLBACK =
+      "CN,IN,US,ID,BR,PK,NG,BD,RU,JP,MX,PH,EG,ET,DE,IR,TR,FR,GB,TH,IT,ZA,TZ,MM,KR,CO,ES,UG,AR,MA,SA,MY,PE,VE,GH,NP,YE,AF,IQ,TW,AU,DZ,SD,UZ,AO,MZ,PL,UA,CI,MG,CM,NL,RO,KZ,SY,EC,GT,SN,TD,SO,ZW,GN,RW,BE,BF,NE,MW,CH,TN,BG,BJ,TG,LY,LR,LB,SK,SL,NO,FI,DK,IE,HR,BA,LT,LV,EE,RS,GE,AM,AZ,JO,KW,QA,OM,BH,CY,MT,AL,MK,MD".split(
+        ","
+      );
 
     /** RandomUser `nat=` param (UK is `gb`, not `gb` code in ISO is GB). */
     function randomUserNatParam(codeUpper) {
@@ -637,12 +642,21 @@
         ANSWER_COUNTRIES = Object.keys(NAT_TO_ZH)
           .sort()
           .map((code) => ({ code, zh: NAT_TO_ZH[code] }));
+        CODE_POP_RANK = Object.create(null);
+        (data.countries || []).forEach((row, i) => {
+          const c = String(row.code || "").toUpperCase();
+          if (c) CODE_POP_RANK[c] = i;
+        });
       } catch (e) {
         NAT_TO_ZH = { ...FALLBACK_NAT_TO_ZH };
         ANSWER_COUNTRIES = Object.keys(NAT_TO_ZH).map((code) => ({
           code,
           zh: NAT_TO_ZH[code],
         }));
+        CODE_POP_RANK = Object.create(null);
+        POP_ORDER_FALLBACK.forEach((c, i) => {
+          CODE_POP_RANK[c] = i;
+        });
       }
     }
 
@@ -811,35 +825,65 @@
     function pickRounds() {
       const pool = POOL;
       const target = Math.min(ROUNDS_PER_GAME, pool.length);
-      const byCode = Object.create(null);
-      for (const r of pool) {
-        if (!byCode[r.code]) byCode[r.code] = [];
-        byCode[r.code].push(r);
-      }
-      for (const k of Object.keys(byCode)) {
-        byCode[k] = shuffle(byCode[k]);
-      }
-      const codes = shuffle(Object.keys(byCode));
+      if (target <= 0) return [];
+
+      const minWhite = Math.ceil(target * 0.7);
+      const minBig = Math.ceil(target * 0.7);
+      const BIG_POP_RANK_CUTOFF = 40;
+
+      const isWhite = (r) => r.appearance === "white";
+      const popRank = (code) => CODE_POP_RANK[String(code || "").toUpperCase()];
+      const isBigCountry = (code) => {
+        const i = popRank(code);
+        return i != null && i < BIG_POP_RANK_CUTOFF;
+      };
+
+      const wb = shuffle(pool.filter((r) => isWhite(r) && isBigCountry(r.code)));
+      const ws = shuffle(pool.filter((r) => isWhite(r) && !isBigCountry(r.code)));
+      const nb = shuffle(pool.filter((r) => !isWhite(r) && isBigCountry(r.code)));
+      const ns = shuffle(pool.filter((r) => !isWhite(r) && !isBigCountry(r.code)));
+
+      const used = new Set();
       const out = [];
-      while (out.length < target) {
-        let added = false;
-        for (const code of codes) {
-          if (out.length >= target) break;
-          const bucket = byCode[code];
-          if (!bucket.length) continue;
-          out.push(bucket.pop());
-          added = true;
-        }
-        if (!added) break;
-      }
-      const used = new Set(out);
-      for (const r of shuffle(pool)) {
-        if (out.length >= target) break;
-        if (!used.has(r)) {
+
+      function takeAny(list) {
+        while (list.length) {
+          const r = list.pop();
+          if (used.has(r.id)) continue;
+          used.add(r.id);
           out.push(r);
-          used.add(r);
+          return true;
         }
+        return false;
       }
+
+      const whiteN = () => out.filter(isWhite).length;
+      const bigN = () => out.filter((r) => isBigCountry(r.code)).length;
+
+      while (out.length < target) {
+        const needW = whiteN() < minWhite;
+        const needB = bigN() < minBig;
+        let ok = false;
+        if (needW && needB) {
+          ok = takeAny(wb) || takeAny(ws) || takeAny(nb) || takeAny(ns);
+        } else if (needW) {
+          ok = takeAny(ws) || takeAny(wb);
+        } else if (needB) {
+          ok = takeAny(nb) || takeAny(wb);
+        } else {
+          ok = takeAny(ns) || takeAny(nb) || takeAny(ws) || takeAny(wb);
+        }
+        if (!ok) break;
+      }
+
+      const tail = shuffle(pool.filter((r) => !used.has(r.id)));
+      while (out.length < target && tail.length) {
+        const r = tail.pop();
+        if (used.has(r.id)) continue;
+        used.add(r.id);
+        out.push(r);
+      }
+
       return shuffle(out);
     }
 
