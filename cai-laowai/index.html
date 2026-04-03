@@ -304,7 +304,7 @@
       justify-content: flex-start;
     }
     #screen-result .result-actions {
-      margin-top: 14px;
+      margin-top: 16px;
       flex-shrink: 0;
     }
 
@@ -314,37 +314,9 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding: 8px 0 4px;
+      padding: 12px 0 0;
+      gap: 16px;
     }
-    .result-brand-poster-row {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: nowrap;
-      justify-content: center;
-      align-items: center;
-      gap: clamp(0, 1.2vw, 0.1em);
-      margin: 0 0 14px;
-      font-size: inherit;
-      font-weight: inherit;
-    }
-    .result-brand-poster-char {
-      font-family: "Noto Sans SC", sans-serif;
-      font-weight: 900;
-      font-size: clamp(1.65rem, 8.5vw, 2.15rem);
-      line-height: 1;
-      color: #05147a;
-      transform: rotate(var(--tilt, 0deg));
-      -webkit-text-stroke: clamp(1px, 0.4vw, 2.5px) #fff;
-      paint-order: stroke fill;
-      text-shadow:
-        2px 3px 0 rgba(255, 255, 255, 0.55),
-        4px 6px 0 rgba(5, 20, 100, 0.2),
-        0 8px 18px rgba(0, 0, 0, 0.14);
-      filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.35));
-    }
-    .result-brand-poster-char:nth-child(1) { --tilt: -2.5deg; }
-    .result-brand-poster-char:nth-child(2) { --tilt: 1.5deg; }
-    .result-brand-poster-char:nth-child(3) { --tilt: -1deg; }
     .result-focus-line {
       font-family: "Noto Sans SC", sans-serif;
       font-weight: 900;
@@ -363,14 +335,12 @@
     .result-fraction {
       font-weight: 700;
       font-size: 0.9rem;
-      margin-top: 10px;
       opacity: 0.92;
       color: #fff;
       text-shadow: 0 1px 8px rgba(0, 0, 0, 0.15);
     }
     .result-details {
       width: 100%;
-      margin-top: 14px;
       text-align: left;
       font-size: 0.88rem;
       font-weight: 700;
@@ -456,8 +426,8 @@
     .result-actions {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-top: 20px;
+      gap: 12px;
+      margin-top: 16px;
       padding-bottom: 8px;
     }
     .result-actions .result-btn {
@@ -564,9 +534,6 @@
 
     <section id="screen-result" class="screen">
       <div class="result-hero">
-        <h2 class="result-brand-poster-row" aria-hidden="true">
-          <span class="result-brand-poster-char">猜</span><span class="result-brand-poster-char">老</span><span class="result-brand-poster-char">外</span>
-        </h2>
         <p class="result-focus-line prose-cjk">
           你本局答对了 <span class="result-pct-em" id="final-pct">0</span><span class="result-pct-em">%</span> 的题目
         </p>

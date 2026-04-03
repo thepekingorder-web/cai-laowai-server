@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Staging QA · keep / remove</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e8eaef; }
+    body { max-width: 560px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; min-height: 100dvh; }
+    .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+    h1 { font-size: 1.1rem; font-weight: 700; color: #f59e0b; }
+    .counter { font-size: 0.85rem; color: #8b92a5; }
+    .photo-box {
+      flex: 1; background: #1a1d27; border-radius: 14px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 300px; position: relative;
+    }
+    .photo-box img { max-width: 100%; max-height: 72vh; object-fit: contain; display: block; }
+    .photo-box .loading { color: #555; font-size: 0.9rem; }
+    .country-bar {
+      text-align: center; padding: 14px 0 10px; font-size: 1.3rem; font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .country-bar .code { color: #f59e0b; margin-right: 8px; }
+    .country-bar .name { color: #e8eaef; }
+    .actions { display: flex; gap: 12px; padding: 10px 0 14px; }
+    .actions button {
+      flex: 1; padding: 16px; border: none; border-radius: 12px;
+      font-size: 1.1rem; font-weight: 700; cursor: pointer;
+      transition: transform 0.08s, opacity 0.08s;
+    }
+    .actions button:active { transform: scale(0.97); opacity: 0.85; }
+    .btn-remove { background: #dc2626; color: #fff; }
+    .btn-keep { background: #16a34a; color: #fff; }
+    .btn-remove:hover { background: #ef4444; }
+    .btn-keep:hover { background: #22c55e; }
+    .meta { font-size: 0.72rem; color: #555; text-align: center; padding-bottom: 8px; word-break: break-all; }
+    .meta a { color: #6b7280; }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #e8eaef; padding: 10px 20px; border-radius: 10px;
+      font-size: 0.9rem; font-weight: 600; opacity: 0; transition: opacity 0.2s;
+      pointer-events: none; z-index: 10;
+    }
+    .toast.show { opacity: 1; }
+    .toast.removed { border-left: 4px solid #dc2626; }
+    .toast.kept { border-left: 4px solid #16a34a; }
+    .empty { text-align: center; padding: 60px 20px; color: #8b92a5; }
+    .empty h2 { font-size: 1.4rem; margin-bottom: 8px; color: #22c55e; }
+    kbd { background: #333; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+    .hint { text-align: center; font-size: 0.78rem; color: #555; padding-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>Staging QA</h1>
+    <span class="counter" id="counter">loading…</span>
+  </div>
+
+  <div class="photo-box" id="photo-box">
+    <span class="loading">Loading pool…</span>
+  </div>
+  <div class="country-bar" id="country-bar"></div>
+  <div class="meta" id="meta"></div>
+  <div class="hint"><kbd>←</kbd> keep &nbsp; <kbd>→</kbd> remove &nbsp; <kbd>u</kbd> undo</div>
+
+  <div class="actions" id="actions" hidden>
+    <button class="btn-keep" id="btn-keep">✓ Keep</button>
+    <button class="btn-remove" id="btn-remove">✕ Remove</button>
+  </div>
+
+  <div class="empty" id="empty-msg" hidden>
+    <h2>All done</h2>
+    <p>No more photos to review.</p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const API_BASE = window.location.origin;
+  const POOL_URL = API_BASE + "/data/faces-pool-staging.json";
+  const DELETE_URL = API_BASE + "/api/pool-staging/delete";
+  const COUNTRIES_URL = API_BASE + "/data/countries.json";
+
+  let entries = [];
+  let countryMap = {};
+  let pos = 0;
+  let undoStack = [];
+  let busy = false;
+
+  function assetUrl(row) {
+    if (row.file && String(row.file).trim()) {
+      const f = String(row.file).trim().replace(/^\/?assets\//, "");
+      const segs = f.split("/").map(s => encodeURIComponent(s));
+      return API_BASE + "/assets/" + segs.join("/");
+    }
+    if (row.img) return String(row.img).trim();
+    return "";
+  }
+
+  function countryLabel(row) {
+    const code = (row.code || "").toUpperCase();
+    const zh = row.zh || countryMap[code]?.zh || "";
+    const en = countryMap[code]?.en || "";
+    return { code, zh, en };
+  }
+
+  function render() {
+    const box = document.getElementById("photo-box");
+    const bar = document.getElementById("country-bar");
+    const meta = document.getElementById("meta");
+    const acts = document.getElementById("actions");
+    const emptyMsg = document.getElementById("empty-msg");
+    const counter = document.getElementById("counter");
+
+    if (entries.length === 0) {
+      box.innerHTML = "";
+      bar.textContent = "";
+      meta.textContent = "";
+      acts.hidden = true;
+      emptyMsg.hidden = false;
+      counter.textContent = "0 left";
+      return;
+    }
+
+    emptyMsg.hidden = true;
+    acts.hidden = false;
+    pos = Math.min(pos, entries.length - 1);
+    const row = entries[pos];
+    const url = assetUrl(row);
+    const { code, zh, en } = countryLabel(row);
+
+    box.innerHTML = url
+      ? `<img src="${url}" alt="${row.id || ""}" referrerpolicy="no-referrer" />`
+      : `<span class="loading">No image</span>`;
+
+    bar.innerHTML = `<span class="code">${code}</span><span class="name">${zh}${en ? " (" + en + ")" : ""}</span>`;
+
+    const parts = [];
+    if (row.id) parts.push(row.id);
+    if (row.source_url) parts.push(`<a href="${row.source_url}" target="_blank" rel="noopener">source</a>`);
+    if (row.license) parts.push(row.license);
+    meta.innerHTML = parts.join(" · ");
+
+    counter.textContent = `${pos + 1} / ${entries.length}`;
+  }
+
+  function toast(msg, type) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = "toast show " + (type || "");
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = "toast"; }, 1400);
+  }
+
+  async function remove() {
+    if (busy || entries.length === 0) return;
+    busy = true;
+    const row = entries[pos];
+    try {
+      const res = await fetch(DELETE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entry_id: row.id }),
+      });
+      if (!res.ok) throw new Error("delete failed: " + res.status);
+      const data = await res.json();
+      entries.splice(pos, 1);
+      undoStack.push({ action: "remove", row, pos, serverRemaining: data.remaining });
+      if (pos >= entries.length && pos > 0) pos--;
+      toast(`Removed — ${data.remaining} left`, "removed");
+      render();
+    } catch (e) {
+      toast("Error: " + e.message, "removed");
+    } finally {
+      busy = false;
+    }
+  }
+
+  function keep() {
+    if (entries.length === 0) return;
+    const row = entries[pos];
+    toast(`Kept ${row.code}`, "kept");
+    if (pos < entries.length - 1) {
+      pos++;
+    } else if (entries.length > 1) {
+      pos = 0;
+    }
+    render();
+  }
+
+  async function undo() {
+    if (busy || undoStack.length === 0) return;
+    const last = undoStack.pop();
+    if (last.action === "remove") {
+      busy = true;
+      try {
+        const res = await fetch(POOL_URL, { cache: "no-store" });
+        const pool = await res.json();
+        pool.entries.splice(last.pos, 0, last.row);
+        pool.version = Math.floor(Date.now() / 1000);
+        pool.generated_at = new Date().toISOString();
+        // Re-upload not possible via simple API — re-insert locally and warn
+        entries.splice(last.pos, 0, last.row);
+        pos = last.pos;
+        toast("Undone locally (file already deleted from disk)", "kept");
+        render();
+      } catch (e) {
+        toast("Undo failed: " + e.message, "removed");
+      } finally {
+        busy = false;
+      }
+    }
+  }
+
+  async function load() {
+    try {
+      const [rc, rp] = await Promise.all([
+        fetch(COUNTRIES_URL, { cache: "no-store" }),
+        fetch(POOL_URL, { cache: "no-store" }),
+      ]);
+      if (!rc.ok) throw new Error("countries.json " + rc.status);
+      if (!rp.ok) throw new Error("staging pool " + rp.status);
+      const cj = await rc.json();
+      const pj = await rp.json();
+      countryMap = {};
+      for (const c of (cj.countries || [])) {
+        countryMap[c.code] = { zh: c.zh, en: c.en || "" };
+      }
+      entries = pj.entries || [];
+      pos = 0;
+      render();
+    } catch (e) {
+      document.getElementById("photo-box").innerHTML =
+        `<span class="loading">Error: ${e.message}</span>`;
+    }
+  }
+
+  document.getElementById("btn-keep").addEventListener("click", keep);
+  document.getElementById("btn-remove").addEventListener("click", remove);
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA") return;
+    if (ev.key === "ArrowLeft") { ev.preventDefault(); keep(); }
+    if (ev.key === "ArrowRight") { ev.preventDefault(); remove(); }
+    if (ev.key === "u" || ev.key === "U") { ev.preventDefault(); undo(); }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
